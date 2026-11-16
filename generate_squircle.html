@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Superellipse Studio | Inside-Stroke Squircle Generator</title>
+    <style>
+        /* ----- CSS VARIABLES (Dynamic Hue System) ----- */
+        :root {
+            --hue-base: 240;          /* Main hue: blue-purple spectrum */
+            --hue-accent: calc(var(--hue-base));
+            --bg-deep: hsl(var(--hue-base), 25%, 6%);
+            --bg-surface: hsl(var(--hue-base), 22%, 12%);
+            --bg-elevated: hsl(var(--hue-base), 20%, 18%);
+            --border-glow: hsl(var(--hue-base), 60%, 35%);
+            --text-primary: hsl(var(--hue-base), 15%, 92%);
+            --text-secondary: hsl(var(--hue-base), 12%, 70%);
+            --accent-soft: hsl(var(--hue-accent), 70%, 55%);
+            --accent-strong: hsl(var(--hue-accent), 85%, 62%);
+            --slider-track: hsl(var(--hue-base), 20%, 24%);
+            --slider-thumb: hsl(var(--hue-accent), 75%, 60%);
+            --card-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.02);
+            --transition-speed: 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-deep);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            color: var(--text-primary);
+            padding: 2rem 1.5rem;
+            line-height: 1.4;
+        }
+
+        .dashboard {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 1.9rem;
+            letter-spacing: -0.01em;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-soft) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .sub {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            border-left: 3px solid var(--accent-soft);
+            padding-left: 1rem;
+            font-weight: 400;
+        }
+
+        /* responsive grid */
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        /* control panel — glassmorphic dark card */
+        .controls-panel {
+            background: var(--bg-surface);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            padding: 1.5rem 1.25rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid hsla(var(--hue-base), 40%, 25%, 0.5);
+        }
+
+        .param-group {
+            margin-bottom: 1.75rem;
+        }
+
+        .param-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+            color: var(--text-secondary);
+        }
+
+        .param-header span:first-child {
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: hsl(var(--hue-base), 25%, 20%);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+        }
+
+        .param-header .value-display {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-elevated);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            -webkit-appearance: none;
+            background: var(--slider-track);
+            border-radius: 10px;
+            outline: none;
+            margin: 0.8rem 0 0.4rem;
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--slider-thumb);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 6px var(--accent-soft);
+            border: none;
+            transition: 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--accent-strong);
+        }
+
+        .number-input {
+            background: var(--bg-elevated);
+            border: 1px solid hsl(var(--hue-base), 30%, 30%);
+            border-radius: 14px;
+            padding: 0.5rem 0.8rem;
+            width: 100%;
+            color: var(--text-primary);
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-top: 0.4rem;
+            transition: 0.15s;
+        }
+
+        .number-input:focus {
+            outline: none;
+            border-color: var(--accent-soft);
+            box-shadow: 0 0 0 2px hsla(var(--hue-accent), 70%, 50%, 0.3);
+        }
+
+        hr {
+            margin: 1.5rem 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, hsl(var(--hue-base), 30%, 25%), transparent);
+        }
+
+        .color-stroke-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .color-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-elevated);
+            padding: 0.3rem 0.8rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+        }
+
+        input[type="color"] {
+            width: 40px;
+            height: 40px;
+            border: 2px solid hsl(var(--hue-base), 30%, 40%);
+            border-radius: 12px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        button {
+            background: linear-gradient(95deg, var(--accent-soft), var(--accent-strong));
+            border: none;
+            padding: 0.7rem 1.2rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            margin-top: 0.5rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+        }
+
+        .reset-btn {
+            background: hsl(var(--hue-base), 20%, 22%);
+            color: var(--text-primary);
+            margin-top: 0.75rem;
+            border: 1px solid hsl(var(--hue-base), 35%, 30%);
+        }
+
+        /* preview container — fixed 400x400 box */
+        .preview-card {
+            background: var(--bg-surface);
+            border-radius: 2rem;
+            box-shadow: var(--card-shadow);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid hsla(var(--hue-base), 40%, 25%, 0.4);
+        }
+
+        .svg-container {
+            background: hsl(var(--hue-base), 20%, 8%);
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 400px;
+            height: 400px;
+            margin: 0 auto;
+            padding: 12px;
+            transition: all 0.2s;
+            border: 1px solid hsla(var(--hue-base), 40%, 20%, 0.6);
+        }
+
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4));
+            cursor: pointer;
+        }
+
+        .info-badge {
+            margin-top: 1rem;
+            font-size: 0.7rem;
+            text-align: center;
+            color: var(--text-secondary);
+            background: hsl(var(--hue-base), 20%, 12%);
+            padding: 0.5rem;
+            border-radius: 28px;
+            font-family: monospace;
+        }
+
+        @media (max-width: 780px) {
+            .editor-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            body {
+                padding: 1rem;
+            }
+            .svg-container {
+                width: 100%;
+                max-width: 400px;
+                height: auto;
+                aspect-ratio: 1 / 1;
+            }
+        }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <h1>◈ SUPER<span style="font-weight:300">ELLIPSE</span> STUDIO</h1>
+    <div class="editor-grid">
+        <!-- CONTROL PANEL -->
+        <div class="controls-panel">
+            <!-- Exponent n -->
+            <div class="param-group">
+                <div class="param-header">
+                    <span>📐 exponent (n)</span>
+                    <span class="value-display" id="expValue">3.00</span>
+                </div>
+                <input type="range" id="exponentSlider" min="0.5" max="8.0" step="0.01" value="3.0">
+                <input type="number" id="exponentNumber" class="number-input" step="0.05" value="3.0" min="0.5" max="8.0">
+            </div>
+
+            <!-- Unified Size (square) -->
+            <div class="param-group">
+                <div class="param-header">
+                    <span>📏 size (px)</span>
+                    <span class="value-display" id="sizeValue">400</span>
+                </div>
+                <input type="range" id="sizeSlider" min="80" max="800" step="2" value="400">
+                <input type="number" id="sizeNumber" class="number-input" step="5" min="80" max="800" value="400">
+            </div>
+
+            <!-- Point density (16 → 1024) -->
+            <div class="param-group">
+                <div class="param-header">
+                    <span>🔘 point density</span>
+                    <span class="value-display" id="pointsValue">1024</span>
+                </div>
+                <input type="range" id="pointsSlider" min="16" max="1024" step="4" value="1024">
+                <input type="number" id="pointsNumber" class="number-input" step="10" min="16" max="1024" value="1024">
+                <div style="font-size:0.7rem; margin-top:6px;">smoother contours = higher precision</div>
+            </div>
+
+            <hr>
+
+            <!-- Appearance: fill none, stroke white, inside stroke via clipPath -->
+            <div class="param-group">
+                <div class="param-header">
+                    <span>🎨 stroke</span>
+                </div>
+                <div class="color-stroke-row">
+                    <input type="color" id="strokeColor" value=#ffffff>
+                    <input type="number" id="strokeWidth" min="0" max="10000" step="1" value="50" style="width:75px; background:var(--bg-elevated); border-radius:20px; border:1px solid var(--border-glow); color:white; padding:0.3rem;">
+                    <div class="color-label">px</div>
+                </div>
+            </div>
+
+            <div class="dual-row" style="display: flex; gap: 1rem;">
+                <button id="downloadBtn">Download</button>
+                <button id="resetBtn" class="reset-btn">Defaults</button>
+            </div>
+        </div>
+
+        <!-- PREVIEW CARD - fixed 400x400 container -->
+        <div class="preview-card">
+            <div class="svg-container" id="svgContainer">
+                <svg id="squircleSvg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <clipPath id="innerStrokeClip">
+                            <path id="clipPathShape" d=""/>
+                        </clipPath>
+                    </defs>
+                    <!-- Group with clip-path ensures stroke appears only inside the shape -->
+                    <g clip-path="url(#innerStrokeClip)">
+                        <path id="squirclePath" fill="none" stroke="#ffffff" stroke-width="50" stroke-linejoin="round" d=""/>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ----- DOM elements -----
+        const expSlider = document.getElementById('exponentSlider');
+        const expNumber = document.getElementById('exponentNumber');
+        const expValueSpan = document.getElementById('expValue');
+
+        // unified size (square)
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeNumber = document.getElementById('sizeNumber');
+        const sizeValueSpan = document.getElementById('sizeValue');
+
+        // points density
+        const pointsSlider = document.getElementById('pointsSlider');
+        const pointsNumber = document.getElementById('pointsNumber');
+        const pointsValueSpan = document.getElementById('pointsValue');
+
+        // stroke controls
+        const strokeColorPicker = document.getElementById('strokeColor');
+        const strokeWidthInput = document.getElementById('strokeWidth');
+
+        // svg elements
+        const svgElement = document.getElementById('squircleSvg');
+        const pathElement = document.getElementById('squirclePath');
+        const clipPathShape = document.getElementById('clipPathShape');
+
+        // buttons
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // ----- state variables -----
+        let exponent = 3.0;
+        let size = 400;           // width & height (square)
+        let pointCount = 1024;    // default 1024
+        let strokeColor = "#ffffff";
+        let strokeWidthVal = 50;
+
+        // Fill is permanently "none" (as requested)
+
+        // ----- core superellipse path generator (parametric) -----
+        function generateSquirclePathData(n, w, h, numPoints) {
+            if (n <= 0) n = 0.8;
+            const a = w / 2;
+            const b = h / 2;
+            const centerX = w / 2;
+            const centerY = h / 2;
+            
+            const points = [];
+            for (let i = 0; i < numPoints; i++) {
+                const t = (i / numPoints) * 2 * Math.PI;
+                const cosTheta = Math.cos(t);
+                const sinTheta = Math.sin(t);
+                
+                const absCos = Math.abs(cosTheta);
+                const absSin = Math.abs(sinTheta);
+                const xComp = Math.sign(cosTheta) * Math.pow(absCos, 2 / n);
+                const yComp = Math.sign(sinTheta) * Math.pow(absSin, 2 / n);
+                
+                let x = a * xComp;
+                let y = b * yComp;
+                
+                const px = x + centerX;
+                const py = y + centerY;
+                points.push([px, py]);
+            }
+            
+            if (points.length === 0) return "";
+            let pathD = `M ${points[0][0].toFixed(3)},${points[0][1].toFixed(3)} `;
+            for (let i = 1; i < points.length; i++) {
+                pathD += `L ${points[i][0].toFixed(3)},${points[i][1].toFixed(3)} `;
+            }
+            pathD += "Z";
+            return pathD;
+        }
+        
+        // ----- full UI update: regenerate path, update clipPath & main path, stroke style -----
+        function updateSquircle() {
+            // read from live inputs
+            exponent = parseFloat(expSlider.value);
+            size = parseInt(sizeSlider.value, 10);
+            pointCount = parseInt(pointsSlider.value, 10);
+            
+            // clamping
+            exponent = Math.min(8.0, Math.max(0.8, exponent));
+            size = Math.min(800, Math.max(80, size));
+            pointCount = Math.min(1024, Math.max(16, pointCount));
+            
+            // update all numeric displays
+            expSlider.value = exponent;
+            expNumber.value = exponent.toFixed(3);
+            expValueSpan.innerText = exponent.toFixed(3);
+            
+            sizeSlider.value = size;
+            sizeNumber.value = size;
+            sizeValueSpan.innerText = size;
+            
+            pointsSlider.value = pointCount;
+            pointsNumber.value = pointCount;
+            pointsValueSpan.innerText = pointCount;
+            
+            // get stroke settings
+            strokeColor = strokeColorPicker.value;
+            strokeWidthVal = parseFloat(strokeWidthInput.value);
+            if (isNaN(strokeWidthVal)) strokeWidthVal = 50;
+            strokeWidthVal = Math.min(1000, Math.max(0, strokeWidthVal));
+            strokeWidthInput.value = strokeWidthVal;
+            
+            // generate fresh path data (both main path and clipPath use identical shape)
+            const newPathData = generateSquirclePathData(exponent, size, size, pointCount);
+            if (newPathData) {
+                pathElement.setAttribute('d', newPathData);
+                clipPathShape.setAttribute('d', newPathData);
+            } else {
+                const fallback = "M 0,0 L 1,1 Z";
+                pathElement.setAttribute('d', fallback);
+                clipPathShape.setAttribute('d', fallback);
+            }
+            
+            // update SVG viewBox to match new square size
+            svgElement.setAttribute('viewBox', `0 0 ${size} ${size}`);
+            
+            // apply stroke appearance (fill is always "none")
+            pathElement.setAttribute('stroke', strokeColor);
+            pathElement.setAttribute('stroke-width', strokeWidthVal);
+            // fill remains "none"
+            pathElement.setAttribute('fill', "none");
+        }
+        
+        // ----- bidirectional sync helpers -----
+        function bindSliderAndNumber(slider, number, updateFunc, isInt = true, customFormatter = null) {
+            slider.addEventListener('input', (e) => {
+                let val = isInt ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
+                if (customFormatter && !isInt) number.value = customFormatter(val);
+                else if (isInt) number.value = val;
+                else number.value = val.toFixed(3);
+                updateFunc();
+            });
+            number.addEventListener('input', (e) => {
+                let val = isInt ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
+                if (isNaN(val)) val = parseFloat(slider.min);
+                val = Math.min(parseFloat(slider.max), Math.max(parseFloat(slider.min), val));
+                slider.value = val;
+                if (isInt) number.value = Math.floor(val);
+                else number.value = val.toFixed(3);
+                updateFunc();
+            });
+        }
+        
+        // ----- attach all events -----
+        function bindEvents() {
+            // exponent (float)
+            bindSliderAndNumber(expSlider, expNumber, updateSquircle, false);
+            // size (integer)
+            bindSliderAndNumber(sizeSlider, sizeNumber, updateSquircle, true);
+            // point density (integer)
+            bindSliderAndNumber(pointsSlider, pointsNumber, updateSquircle, true);
+            
+            // stroke color & width
+            strokeColorPicker.addEventListener('input', () => {
+                strokeColor = strokeColorPicker.value;
+                pathElement.setAttribute('stroke', strokeColor);
+                updateSquircle(); // reapply ensures consistency but no extra overhead
+            });
+            strokeWidthInput.addEventListener('input', () => {
+                let val = parseFloat(strokeWidthInput.value);
+                if (isNaN(val)) val = 50;
+                val = Math.min(1000, Math.max(0, val));
+                strokeWidthVal = val;
+                strokeWidthInput.value = val;
+                pathElement.setAttribute('stroke-width', strokeWidthVal);
+                updateSquircle();
+            });
+        }
+        
+        // ----- reset to exact defaults: size=400, exponent=4, points=1024, stroke=white, width=50, fill none -----
+        function resetToDefaults() {
+            exponent = 3.0;
+            size = 400;
+            pointCount = 1024;
+            strokeColor = "#ffffff";
+            strokeWidthVal = 50;
+            
+            // push to UI
+            expSlider.value = exponent;
+            expNumber.value = exponent.toFixed(3);
+            sizeSlider.value = size;
+            sizeNumber.value = size;
+            pointsSlider.value = pointCount;
+            pointsNumber.value = pointCount;
+            strokeColorPicker.value = strokeColor;
+            strokeWidthInput.value = strokeWidthVal;
+            
+            // force refresh
+            updateSquircle();
+        }
+        
+        // ----- download SVG with inside-stroke clipPath preserved -----
+        function downloadSVG() {
+            const currentPathData = clipPathShape.getAttribute('d');  // same as main path
+            const currentStroke = pathElement.getAttribute('stroke');
+            const currentStrokeWidth = pathElement.getAttribute('stroke-width');
+            const currentViewBox = svgElement.getAttribute('viewBox') || `0 0 ${size} ${size}`;
+            const svgWidth = size;
+            const svgHeight = size;
+            
+            // Build standalone SVG that keeps clip-path technique for inside-only stroke
+            const svgString = `<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="${currentViewBox}" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <clipPath id="innerStrokeClip">
+      <path d="${currentPathData}"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#innerStrokeClip)">
+    <path d="${currentPathData}" fill="none" stroke="${currentStroke}" stroke-width="${currentStrokeWidth}" stroke-linejoin="round" />
+  </g>
+  <metadata>
+    <description>Superellipse squircle | exponent n = ${exponent}, size = ${size}×${size}, points = ${pointCount}, inside stroke only via clipPath</description>
+  </metadata>
+</svg>`;
+            
+            const blob = new Blob([svgString], { type: "image/svg+xml" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `squircle_insideStroke_n${exponent.toFixed(2)}_${size}px.svg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // ----- initialization -----
+        function init() {
+            bindEvents();
+            resetToDefaults();  // sets all default values and generates shape
+            // ensure stroke is correctly configured as inside-only
+            pathElement.setAttribute('fill', "none");
+        }
+        
+        downloadBtn.addEventListener('click', downloadSVG);
+        resetBtn.addEventListener('click', resetToDefaults);
+        
+        init();
+    })();
+</script>
+</body>
+</html>

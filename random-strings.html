@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>String Generator · Unique Random Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+    }
+
+    :root {
+      --hue-base: 240;
+
+      --bg-body: hsl(var(--hue-base), 20%, 0%);
+      --bg-card: hsl(var(--hue-base), 20%, 5%);
+      --bg-surface: hsl(var(--hue-base), 24%, 9%);
+      --bg-surface-hover: hsl(var(--hue-base), 27%, 13%);
+      --bg-input: hsl(var(--hue-base), 17%, 3%);
+      --bg-code-block: hsl(var(--hue-base), 21%, 4%);
+      --bg-progress: hsl(var(--hue-base), 21%, 9%);
+      
+      --text-primary: hsl(var(--hue-base), 3%, 93%);
+      --text-secondary: hsl(var(--hue-base), 9%, 66%);
+      --text-muted: hsl(var(--hue-base), 7%, 45%);
+      --text-disabled: hsl(var(--hue-base), 10%, 32%);
+      
+      --border-light: hsl(var(--hue-base), 16%, 20%);
+      --border-medium: hsl(var(--hue-base), 12%, 26%);
+      --border-focus: hsl(var(--hue-base), 15%, 42%);
+      
+      --accent-primary: hsl(var(--hue-base), 84%, 30%);
+      --accent-primary-hover: hsl(var(--hue-base), 84%, 40%);
+      --accent-primary-light: hsl(var(--hue-base), 75%, 35%);
+      --accent-success: hsl(160, 84%, 35%);
+      --accent-warning: hsl(38, 92%, 40%);
+      --accent-danger: hsl(0, 84%, 40%);
+      --accent-danger-bg: rgba(var(--hue-base), 68, 68, 0.1);
+      
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 20px 35px -12px rgba(0, 0, 0, 0.5);
+      
+      --radius-sm: 0.75rem;
+      --radius-md: 1rem;
+      --radius-lg: 1.5rem;
+      --radius-xl: 2rem;
+    }
+
+    body {
+      background: var(--bg-body);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      max-width: 780px;
+      width: 100%;
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      border: 1px solid var(--border-light);
+    }
+
+    .content {
+      padding: 1.8rem 2rem 2rem 2rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin: 0 0 0.25rem 0;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    .sub {
+      color: var(--text-secondary);
+      border-left: 3px solid var(--border-medium);
+      padding-left: 0.75rem;
+      margin-bottom: 1.8rem;
+      font-size: 0.9rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.75rem;
+      accent-color: var(--accent-primary);
+    }
+
+    .input-group label {
+      font-weight: 600;
+      min-width: 150px;
+      color: var(--text-primary);
+    }
+
+    .input-group .field {
+      flex: 1;
+      min-width: 160px;
+    }
+
+    input, select, textarea {
+      background: var(--bg-input);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 0.6rem 1rem;
+      font-size: 0.95rem;
+      transition: 0.2s;
+      width: 100%;
+      color: var(--text-primary);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+      background: var(--bg-surface);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .checkbox-group-vertical {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      background: var(--bg-surface);
+      padding: 0.8rem 1rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-light);
+    }
+
+    .checkbox-group-vertical label {
+      font-weight: normal;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      min-width: auto;
+      color: var(--text-secondary);
+    }
+
+    .checkbox-group-vertical input {
+      width: auto;
+      margin: 0;
+      transform: scale(1.05);
+      accent-color: var(--accent-primary);
+    }
+
+    .custom-char-area {
+      margin-top: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .custom-char-area textarea {
+      flex: 2;
+      min-width: 180px;
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    hr {
+      margin: 1.2rem 0;
+      border: none;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .generate-btn {
+      background: var(--accent-primary);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: var(--radius-xl);
+      cursor: pointer;
+      width: 100%;
+      transition: 0.2s;
+      margin: 0.5rem 0 1rem 0;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .generate-btn:hover {
+      background: var(--accent-primary-hover);
+      transform: scale(0.98);
+    }
+
+    .generate-btn:disabled {
+      background: var(--text-disabled);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .results-panel {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 1.3rem;
+      margin-top: 1.8rem;
+      border: 1px solid var(--border-light);
+    }
+
+    .results-header {
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .sample-list-scroll {
+      background: var(--bg-code-block);
+      border-radius: var(--radius-md);
+      padding: 0.8rem 1.2rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      overflow-y: auto;
+      height: 200px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-light);
+      line-height: 1.5;
+      color: var(--text-primary);
+    }
+
+    .sample-list-scroll span {
+      display: block;
+      padding: 0.15rem 0;
+      border-bottom: 1px solid var(--border-light);
+      font-family: Monaco, monospace;
+    }
+
+    .export-options {
+      background: var(--bg-surface-hover);
+      border-radius: var(--radius-lg);
+      padding: 1.2rem;
+      margin-top: 1rem;
+      border: 1px solid var(--border-light);
+    }
+
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2rem;
+      align-items: flex-end;
+      margin-bottom: 1rem;
+    }
+
+    .flex-col {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .flex-col label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+
+    .btn {
+      border: none;
+      background: var(--bg-surface);
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-xl);
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.15s;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--border-medium);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border-focus);
+    }
+
+    .small-note {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .error-msg {
+      color: var(--accent-danger);
+      background: var(--accent-danger-bg);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      margin-top: 0.6rem;
+    }
+
+    .info-badge {
+      background: rgba(99, 102, 241, 0.15);
+      border-radius: var(--radius-md);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.7rem;
+      color: var(--accent-primary-light);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    @media (max-width: 550px) {
+      .content {
+        padding: 1.2rem;
+      }
+      .checkbox-group-vertical {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="content">
+    <h1>String Generator</h1>
+    <div class="sub">random combinations · unique mode · flexible export</div>
+
+    <div class="input-group">
+      <label>How Many Combinations?</label>
+      <div class="field">
+        <input type="number" id="combCount" value="1000" min="1" max="1000000" step="1">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Minimum Length</label>
+      <div class="field">
+        <input type="number" id="minLen" value="6" min="1" max="128" step="1">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Maximum Length</label>
+      <div class="field">
+        <input type="number" id="maxLen" value="6" min="1" max="128" step="1">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Ensure Unique Values</label>
+      <div class="field" style="display: flex; align-items: left; gap: 1rem; flex-wrap: wrap;">
+        <label style="display: flex; align-items: left; gap: 0.5rem; cursor: pointer; font-weight: normal;">
+          <input type="checkbox" id="uniqueOnly" checked> 
+        </label>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Allowed Character Sets</label>
+      <div class="checkbox-group-vertical" id="charSetsContainer">
+        <label>
+          <input type="checkbox" id="allowNumbers" checked> Numbers (0-9)
+        </label>
+        <label>
+          <input type="checkbox" id="allowLower" checked> Lowercase (a-z)
+        </label>
+        <label>
+          <input type="checkbox" id="allowUpper" checked> Uppercase (A-Z)
+        </label>
+        <label>
+          <input type="checkbox" id="allowSpecial"> Special (!@#$%^&*)
+        </label>
+        <label>
+          <input type="checkbox" id="allowCustom"> Custom characters
+        </label>
+      </div>
+    </div>
+
+    <div id="customCharsWrapper" style="display: none;">
+      <div class="custom-char-area">
+        <textarea id="customChars" rows="2" placeholder="Example: $#@✓123abc"></textarea>
+        <span class="small-note">Custom characters (will be merged with other selected sets)</span>
+      </div>
+    </div>
+
+    <button id="generateBtn" class="generate-btn">GENERATE COMBINATIONS</button>
+
+    <div id="resultsArea" style="display: none;">
+      <div class="results-panel">
+        <div class="results-header">
+          <span>Generated Strings: <span id="totalGeneratedCount"></span></span>
+          <span style="font-size:0.7rem; background:var(--bg-body); padding:0.2rem 0.6rem; border-radius:1rem;">scrollable list</span>
+        </div>
+        <div id="previewListScroll" class="sample-list-scroll"></div>
+
+        <div class="export-options">
+          <div class="flex-row">
+            <div class="flex-col">
+              <label>Prepend</label>
+              <input type="text" id="prependText" placeholder="e.g., 'user:'" value="">
+            </div>
+            <div class="flex-col">
+              <label>Append</label>
+              <input type="text" id="appendText" placeholder="e.g., '@domain'" value="">
+            </div>
+            <div class="flex-col">
+              <label>Separate by</label>
+              <select id="separatorSelect">
+                <option value="newline">Newline</option>
+                <option value="semicolon">Semicolon ;</option>
+                <option value="comma">Comma ,</option>
+                <option value="space">Space</option>
+              </select>
+            </div>
+          </div>
+          <div class="button-group">
+            <button id="downloadTxtBtn" class="btn btn-primary">Download TXT</button>
+            <button id="downloadJsonBtn" class="btn btn-primary">Download JSON</button>
+            <button id="copyClipboardBtn" class="btn btn-secondary">Copy to Clipboard</button>
+          </div>
+          <div class="small-note">TXT & Copy respect prepend/append + separator. JSON exports raw list.</div>
+        </div>
+      </div>
+    </div>
+    <div id="globalError" class="error-msg" style="display: none;"></div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const combCountInput = document.getElementById('combCount');
+    const minLenInput = document.getElementById('minLen');
+    const maxLenInput = document.getElementById('maxLen');
+    const allowNumbers = document.getElementById('allowNumbers');
+    const allowLower = document.getElementById('allowLower');
+    const allowUpper = document.getElementById('allowUpper');
+    const allowSpecial = document.getElementById('allowSpecial');
+    const allowCustom = document.getElementById('allowCustom');
+    const customCharsText = document.getElementById('customChars');
+    const customWrapper = document.getElementById('customCharsWrapper');
+    const generateBtn = document.getElementById('generateBtn');
+    const resultsArea = document.getElementById('resultsArea');
+    const previewListScroll = document.getElementById('previewListScroll');
+    const totalGeneratedCountSpan = document.getElementById('totalGeneratedCount');
+    const globalErrorDiv = document.getElementById('globalError');
+    const uniqueOnlyCheckbox = document.getElementById('uniqueOnly');
+    const prependInput = document.getElementById('prependText');
+    const appendInput = document.getElementById('appendText');
+    const separatorSelect = document.getElementById('separatorSelect');
+    const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+    const copyClipboardBtn = document.getElementById('copyClipboardBtn');
+
+    let lastGeneratedRawList = [];
+    let currentGenerateAbort = false; // to optionally abort, not used but placeholder
+
+    function toggleCustomArea() {
+      if (allowCustom.checked) {
+        customWrapper.style.display = 'block';
+      } else {
+        customWrapper.style.display = 'none';
+      }
+    }
+    allowCustom.addEventListener('change', toggleCustomArea);
+    toggleCustomArea();
+
+    function getAllowedCharset() {
+      let charset = '';
+      if (allowNumbers.checked) charset += '0123456789';
+      if (allowLower.checked) charset += 'abcdefghijklmnopqrstuvwxyz';
+      if (allowUpper.checked) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      if (allowSpecial.checked) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+      if (allowCustom.checked) {
+        let customRaw = customCharsText.value;
+        if (customRaw) {
+          for (let ch of customRaw) {
+            if (!charset.includes(ch)) charset += ch;
+          }
+        }
+      }
+      return charset;
+    }
+
+    function getRandomChar(pool) {
+      if (!pool || pool.length === 0) return '';
+      const randomIndex = Math.floor(Math.random() * pool.length);
+      return pool[randomIndex];
+    }
+
+    function generateRandomString(length, pool) {
+      if (pool.length === 0) return '';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += getRandomChar(pool);
+      }
+      return result;
+    }
+
+    function generateOneString(minLen, maxLen, charset) {
+      const length = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
+      return generateRandomString(length, charset);
+    }
+
+    // --- helpers for exhaustive generation with progress ---
+    function computeTotalPossible(charsetSize, minLen, maxLen) {
+      if (charsetSize === 0) return 0n;
+      let total = 0n;
+      let power = 1n;
+      for (let len = 1; len <= maxLen; len++) {
+        power *= BigInt(charsetSize);
+        if (len >= minLen) {
+          total += power;
+          if (total > 10_000_000n) return total; // early stop
+        }
+      }
+      return total;
+    }
+
+    // generate all strings for a given exact length (synchronous, returns array)
+    function generateAllStringsForLength(charset, length) {
+      if (length === 0) return [''];
+      let result = [''];
+      for (let i = 0; i < length; i++) {
+        let newResult = [];
+        for (let prefix of result) {
+          for (let ch of charset) {
+            newResult.push(prefix + ch);
+          }
+        }
+        result = newResult;
+      }
+      return result;
+    }
+
+    // async exhaustive generation with progress updates
+    async function generateAllStringsWithProgress(charset, minLen, maxLen, totalPossible, progressCallback) {
+      let allStrings = [];
+      let cumulative = 0;
+      for (let len = minLen; len <= maxLen; len++) {
+        const stringsOfLen = generateAllStringsForLength(charset, len);
+        allStrings.push(...stringsOfLen);
+        cumulative += stringsOfLen.length;
+        if (progressCallback) {
+          const percent = Math.min(99, Math.floor((cumulative / Number(totalPossible)) * 100));
+          progressCallback(percent);
+          // yield to allow UI update
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+      return allStrings;
+    }
+
+    // async unique generation with progress (if count > 10000)
+    async function generateUniqueStringsAsync(desiredCount, minLen, maxLen, charset, onProgress) {
+      if (charset.length === 0) return [];
+      
+      const charsetSize = charset.length;
+      const totalPossibleBig = computeTotalPossible(charsetSize, minLen, maxLen);
+      
+      if (totalPossibleBig < BigInt(desiredCount)) {
+        const maxPossible = totalPossibleBig > 1_000_000n ? totalPossibleBig.toString() : Number(totalPossibleBig).toLocaleString();
+        throw new Error(`❌ Cannot generate ${desiredCount} unique strings: maximum possible with current settings is ${maxPossible}. Increase length range or character variety.`);
+      }
+      
+      const threshold = 0.3;
+      const exhaustiveLimit = 10_000_000;
+      const useExhaustive = (desiredCount > threshold * Number(totalPossibleBig)) && (totalPossibleBig <= BigInt(exhaustiveLimit));
+      
+      if (useExhaustive) {
+        // generate all possible strings
+        const allStrings = await generateAllStringsWithProgress(charset, minLen, maxLen, totalPossibleBig, onProgress);
+        // shuffle (Fisher-Yates)
+        for (let i = allStrings.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [allStrings[i], allStrings[j]] = [allStrings[j], allStrings[i]];
+        }
+        const results = allStrings.slice(0, desiredCount);
+        if (onProgress) onProgress(100);
+        return results;
+      }
+      
+      // fallback: trial-and-error with Set
+      const uniqueSet = new Set();
+      const results = [];
+      const maxAttempts = Math.min(desiredCount * 15, 500000);
+      let attempts = 0;
+      
+      while (results.length < desiredCount && attempts < maxAttempts) {
+        const candidate = generateOneString(minLen, maxLen, charset);
+        if (candidate && !uniqueSet.has(candidate)) {
+          uniqueSet.add(candidate);
+          results.push(candidate);
+          if (onProgress && desiredCount > 10000) {
+            const percent = Math.min(99, Math.floor((results.length / desiredCount) * 100));
+            onProgress(percent);
+            if (results.length % 500 === 0) {
+              await new Promise(resolve => setTimeout(resolve, 0)); // yield
+            }
+          }
+        }
+        attempts++;
+      }
+      
+      if (results.length < desiredCount) {
+        throw new Error(`⚠️ Could only generate ${results.length} unique strings out of ${desiredCount}. Try increasing length range or adding more character variety.`);
+      }
+      if (onProgress) onProgress(100);
+      return results;
+    }
+
+    function generateStandardCombinations(combCount, minLen, maxLen, charset) {
+      const results = [];
+      for (let i = 0; i < combCount; i++) {
+        const length = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
+        let randStr = generateRandomString(length, charset);
+        if (randStr === '' && charset.length === 0) randStr = '?';
+        results.push(randStr);
+      }
+      return results;
+    }
+
+    function validateInputs() {
+      const combCount = parseInt(combCountInput.value, 10);
+      const minLen = parseInt(minLenInput.value, 10);
+      const maxLen = parseInt(maxLenInput.value, 10);
+
+      if (isNaN(combCount) || combCount < 1) return 'Number of combinations must be at least 1.';
+      if (combCount > 1_000_000) return 'Maximum 1,000,000 combinations for performance.';
+      if (isNaN(minLen) || minLen < 1) return 'Minimum length must be at least 1.';
+      if (isNaN(maxLen) || maxLen < 1) return 'Maximum length must be at least 1.';
+      if (minLen > maxLen) return 'Minimum length cannot exceed maximum length.';
+      
+      const allowedChars = getAllowedCharset();
+      if (allowedChars.length === 0) {
+        return 'Please select at least one allowed character set (or provide custom characters).';
+      }
+      
+      const uniqueMode = uniqueOnlyCheckbox.checked;
+      if (uniqueMode) {
+        const charsetSize = allowedChars.length;
+        const minL = minLen, maxL = maxLen;
+        if (charsetSize === 1 && (maxL - minL + 1) < combCount) {
+          return `Impossible: With only 1 unique character and length range ${minL}-${maxL}, maximum distinct strings = ${maxL - minL + 1}. Requested ${combCount} unique strings.`;
+        }
+        if (charsetSize > 0 && maxL === minL) {
+          let maxPossible = 1n;
+          for (let i = 0; i < maxL; i++) maxPossible *= BigInt(charsetSize);
+          if (maxPossible < BigInt(combCount)) {
+            return `Theoretical maximum unique strings with fixed length ${maxL} and charset size ${charsetSize} is ${maxPossible}. Cannot generate ${combCount} unique strings. Increase length range or add characters.`;
+          }
+        }
+      }
+      return null;
+    }
+
+    // show progress message in preview area
+    function showProgress(percent) {
+      if (percent === undefined) {
+        previewListScroll.innerHTML = '<span style="font-style:italic;">Generating unique strings, please wait...</span>';
+        totalGeneratedCountSpan.textContent = '...';
+      } else {
+        previewListScroll.innerHTML = `<span style="font-style:italic;">Generating ${percent}%</span>`;
+        totalGeneratedCountSpan.textContent = `Generating ${percent}%`;
+      }
+      resultsArea.style.display = 'block';
+    }
+
+    function clearError() {
+      globalErrorDiv.style.display = 'none';
+      globalErrorDiv.textContent = '';
+    }
+
+    async function generateCombinationsAsync() {
+      clearError();
+      
+      const validationError = validateInputs();
+      if (validationError) {
+        globalErrorDiv.style.display = 'block';
+        globalErrorDiv.textContent = validationError;
+        resultsArea.style.display = 'none';
+        lastGeneratedRawList = [];
+        return null;
+      }
+      
+      const combCount = parseInt(combCountInput.value, 10);
+      const minLen = parseInt(minLenInput.value, 10);
+      const maxLen = parseInt(maxLenInput.value, 10);
+      const charset = getAllowedCharset();
+      const uniqueMode = uniqueOnlyCheckbox.checked;
+      
+      let results = [];
+      const showProgressFlag = uniqueMode && combCount > 10000;
+      
+      try {
+        if (uniqueMode) {
+          if (showProgressFlag) {
+            showProgress(0);
+          }
+          results = await generateUniqueStringsAsync(combCount, minLen, maxLen, charset, (percent) => {
+            if (showProgressFlag) showProgress(percent);
+          });
+        } else {
+          results = generateStandardCombinations(combCount, minLen, maxLen, charset);
+          if (results.length === 0 && charset.length === 0) {
+            throw new Error('No character set selected. Please enable at least one.');
+          }
+        }
+      } catch (err) {
+        globalErrorDiv.style.display = 'block';
+        globalErrorDiv.textContent = err.message;
+        resultsArea.style.display = 'none';
+        lastGeneratedRawList = [];
+        return null;
+      }
+      
+      if (results.length === 0) {
+        return null;
+      }
+      return results;
+    }
+
+    function displayAllResults(rawList) {
+      if (!rawList.length) {
+        previewListScroll.innerHTML = '<span style="color:#94a3b8;">(no strings)</span>';
+        return;
+      }
+      const htmlItems = rawList.map(str => {
+        const escaped = str.replace(/[&<>]/g, function(m) {
+          if (m === '&') return '&amp;';
+          if (m === '<') return '&lt;';
+          if (m === '>') return '&gt;';
+          return m;
+        });
+        return `<span>${escaped}</span>`;
+      }).join('');
+      previewListScroll.innerHTML = htmlItems;
+    }
+
+    function refreshUIWithNewList(rawList) {
+      lastGeneratedRawList = [...rawList];
+      const uniqueNote = uniqueOnlyCheckbox.checked ? " (unique)" : "";
+      totalGeneratedCountSpan.textContent = ` ${rawList.length}${uniqueNote}`;
+      displayAllResults(rawList);
+      resultsArea.style.display = 'block';
+    }
+
+    function getFormattedTxtContent(rawList) {
+      const prepend = prependInput.value;
+      const append = appendInput.value;
+      const sepChoice = separatorSelect.value;
+      
+      let separatorChar = '\n';
+      if (sepChoice === 'semicolon') separatorChar = ';';
+      else if (sepChoice === 'comma') separatorChar = ',';
+      else if (sepChoice === 'space') separatorChar = ' ';
+      else separatorChar = '\n';
+      
+      const transformed = rawList.map(str => prepend + str + append);
+      if (separatorChar === '\n') {
+        return transformed.join('\n');
+      } else {
+        return transformed.join(separatorChar);
+      }
+    }
+
+    async function onGenerate() {
+      // disable button during generation to prevent multiple clicks
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'GENERATING...';
+      try {
+        const rawStrings = await generateCombinationsAsync();
+        if (rawStrings && rawStrings.length) {
+          refreshUIWithNewList(rawStrings);
+        } else if (rawStrings === null) {
+          // error already displayed
+          if (lastGeneratedRawList.length === 0) {
+            resultsArea.style.display = 'none';
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        globalErrorDiv.style.display = 'block';
+        globalErrorDiv.textContent = 'Unexpected error: ' + err.message;
+        resultsArea.style.display = 'none';
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'GENERATE COMBINATIONS';
+      }
+    }
+
+    generateBtn.addEventListener('click', onGenerate);
+
+    function downloadTxt() {
+      if (!lastGeneratedRawList.length) {
+        alert('No combinations generated yet. Press "Generate" first.');
+        return;
+      }
+      const content = getFormattedTxtContent(lastGeneratedRawList);
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `strings_${Date.now()}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson() {
+      if (!lastGeneratedRawList.length) {
+        alert('No combinations generated yet. Press "Generate" first.');
+        return;
+      }
+      const jsonContent = JSON.stringify(lastGeneratedRawList, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `strings_${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    async function copyToClipboard() {
+      if (!lastGeneratedRawList.length) {
+        alert('No combinations generated. Generate some strings first.');
+        return;
+      }
+      const txtContent = getFormattedTxtContent(lastGeneratedRawList);
+      try {
+        await navigator.clipboard.writeText(txtContent);
+        const originalText = copyClipboardBtn.textContent;
+        copyClipboardBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyClipboardBtn.textContent = originalText;
+        }, 1800);
+      } catch (err) {
+        alert('Could not copy: ' + err.message);
+      }
+    }
+
+    downloadTxtBtn.addEventListener('click', downloadTxt);
+    downloadJsonBtn.addEventListener('click', downloadJson);
+    copyClipboardBtn.addEventListener('click', copyToClipboard);
+
+    function clampMinMax() {
+      let minVal = parseInt(minLenInput.value, 10);
+      let maxVal = parseInt(maxLenInput.value, 10);
+      if (isNaN(minVal)) minVal = 1;
+      if (isNaN(maxVal)) maxVal = 1;
+      if (minVal > maxVal) {
+        maxLenInput.value = minVal;
+      }
+    }
+    minLenInput.addEventListener('change', clampMinMax);
+    maxLenInput.addEventListener('change', clampMinMax);
+
+    // initial generation on load
+    window.addEventListener('DOMContentLoaded', async () => {
+      setTimeout(async () => {
+        if (!uniqueOnlyCheckbox.checked) uniqueOnlyCheckbox.checked = true;
+        // ensure default charsets
+        if (getAllowedCharset().length === 0) {
+          if (!allowNumbers.checked) allowNumbers.checked = true;
+          if (!allowLower.checked) allowLower.checked = true;
+        }
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'GENERATING...';
+        try {
+          const raw = await generateCombinationsAsync();
+          if (raw && raw.length) refreshUIWithNewList(raw);
+        } catch (e) {
+          // silent
+        } finally {
+          generateBtn.disabled = false;
+          generateBtn.textContent = 'GENERATE COMBINATIONS';
+        }
+      }, 20);
+    });
+  })();
+</script>
+</body>
+</html>

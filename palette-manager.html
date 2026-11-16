@@ -1,0 +1,2263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Palette Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Any additional script imports here -->
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: hsl(203, 61%, 25%);
+            --dark-primary: hsl(203, 61%, 15%);
+            --light-primary: hsl(203, 45%, 94%);
+        }
+        
+        body {
+            background-color: #ffffff;
+            color: var(--primary);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 1100px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .panel {
+            background-color: var(--light-primary);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .showcase-panel {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            padding-bottom: 0px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--primary);
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.15s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .color-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: left;
+        }
+        
+        .color-preview {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 1px solid var(--primary);
+            flex-shrink: 0;
+        }
+        
+        .color-type-select {
+            margin-bottom: 10px;
+            padding: 10px 20px;
+            height: 40px;
+            border-radius: 20px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.15s ease;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--dark-primary);
+            color: white;
+        }
+                
+        .btn-danger {
+            background-color: #eb3925;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: var(--dark-primary);
+            color: white;
+        }
+        
+        .color-list {
+            max-height: 600px;
+            min-width: 360px;
+            overflow-y: auto;
+            border: solid 1px var(--primary);
+            border-radius: 25px;
+            padding: 5px 15px;
+            background-color: white;
+        }
+        
+        .color-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 20px;
+            border-radius: 10px;
+            border: solid 1px var(--primary);
+            margin-bottom: 10px;
+            margin-top: 10px;
+            background-color: #f7f7f7;
+            transition: all 0.15s ease;
+        }
+        
+        .color-item:hover {
+            background-color: var(--light-primary);
+            cursor: pointer;
+        }
+        
+        .color-item-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            margin-right: 15px;
+            border: 1px solid #ddd;
+        }
+        
+        .color-item-info {
+            flex: 1;
+        }
+        
+        .color-item-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .color-item-category {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            background-color: var(--light-primary);
+            padding: 2px 8px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        
+        .color-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            padding: 6px 10px;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+        
+        .showcase {
+            margin-top: 30px;
+        }
+        
+        .category-section {
+            margin-bottom: 30px;
+        }
+        
+        .category-header {
+            font-size: 1.4rem;
+            color: #2c3e50;
+            background-color: var(--light-primary);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .category-header:hover {
+            background-color: #e3f2fd;
+        }
+        
+        .category-edit-icon {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            font-size: 1rem;
+            color: var(--primary);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .category-header:hover .category-edit-icon {
+            opacity: 1;
+        }
+        
+        .category-edit-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            font-size: 1.4rem;
+            background-color: white;
+        }
+        
+        .color-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        
+        .color-card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            position: relative;
+        }
+        
+        .color-swatch {
+            height: 80px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .edit-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        
+        .color-swatch:hover .edit-overlay {
+            opacity: 1;
+        }
+        
+        .edit-icon {
+            background-color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .color-values {
+            padding: 10px;
+        }
+        
+        .color-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .color-value-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .value-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .value-content {
+            font-family: monospace;
+            color: #333;
+        }
+        
+        .export-options {
+            background-color: var(--light-primary);
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #eee;
+        }
+        
+        .export-option-group {
+            margin-bottom: 15px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group input {
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: var(--primary);
+            font-style: italic;
+            padding: 15px 15px;
+            background-color: white;
+            border-radius: 10px;
+        }
+        
+        .drag-handle {
+            cursor: move;
+            margin-right: 10px;
+            color: #95a5a6;
+        }
+        
+        .dragging {
+            opacity: 0.7;
+            background-color: var(--light-primary);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Color Palette Manager</h1>
+            <p class="subtitle">Manage and save your color palette</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="panel">
+                    <h2>Add or Edit Colors</h2>
+                    <div class="form-group">
+                        <label for="color-name">Color Name</label>
+                        <input type="text" id="color-name" placeholder="e.g., Primary Blue, Background Gray">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="color-category">Category</label>
+                        <input type="text" id="color-category" placeholder="e.g., Brand, Neutral, Accent" list="categories">
+                        <datalist id="categories">
+                            <option value="Brand">
+                            <option value="Neutral">
+                            <option value="Other">
+                        </datalist>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="color-type">Color Format</label>
+                        <select id="color-type" class="color-type-select">
+                            <option value="hex">HEX</option>
+                            <option value="rgb">RGB</option>
+                            <option value="hsl">HSL</option>
+                        </select>
+                        
+                        <div class="color-input-container">
+                            <div class="color-preview" id="color-preview"></div>
+                            <input type="text" id="color-value" placeholder="#3498db or rgb(52, 152, 219) or hsl(204, 70%, 53%)">
+                            <button id="add-color-btn" class="btn-primary">+</button>
+                            <button id="update-color-btn" class="btn-primary" style="display:none">✓</button>
+                            <button id="cancel-edit-btn" class="btn-danger" style="display:none">X</button>
+                        </div>
+                    </div>
+
+                    <div class="buttons">
+                        <button id="import-excel-btn" class="btn-primary">Import from Excel</button>
+                        <input type="file" id="excel-file-input" class="file-input" accept=".xlsx,.csv">
+                    </div>
+
+                </div>
+                
+                <div class="panel">
+                    <h2>Color List</h2>
+                    <div id="color-list-container" class="color-list">
+                        <div class="empty-message">No colors added yet. Start by adding a color above.</div>
+                    </div>
+                    
+                    <div class="buttons">
+                        <button id="sort-by-category-btn" class="btn-primary">Sort by Category</button>
+                        <button id="clear-all-btn" class="btn-danger">Clear All</button>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h2>Export</h2>
+                    
+                    <div class="export-option-group">
+                        <label for="showcase-title">Showcase Title</label>
+                        <input type="text" id="showcase-title" placeholder="Color Palette">
+                    </div>
+                    
+                    <div class="export-option-group">
+                        <label for="showcase-subtitle">Subtitle</label>
+                        <textarea id="showcase-subtitle" rows="3" placeholder="A description of this color palette..."></textarea>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="include-date-checkbox">
+                        <label for="include-date-checkbox">Include date in export</label>
+                    </div>
+                
+                    <div class="buttons">
+                        <button id="export-excel-btn" class="btn-primary">XLSX</button>
+                        <button id="save-showcase-btn" class="btn-primary">HTML</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="showcase-panel">
+                    <h2>Color Showcase</h2>
+                    
+                    <div id="showcase-container">
+                        <div class="empty-message">Colors will appear here when added. Grouped by category.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Designed Sensibly - Color Palette Manager &copy; 2026</p>
+        </footer>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Generating Excel file...</p>
+    </div>
+
+    <script>
+        // Color management state
+        let colors = JSON.parse(localStorage.getItem('colorPalette')) || [];
+        let currentEditIndex = -1;
+        let editingCategory = null;
+        
+        // DOM Elements
+        const colorNameInput = document.getElementById('color-name');
+        const colorCategoryInput = document.getElementById('color-category');
+        const colorTypeSelect = document.getElementById('color-type');
+        const colorValueInput = document.getElementById('color-value');
+        const colorPreview = document.getElementById('color-preview');
+        const addColorBtn = document.getElementById('add-color-btn');
+        const updateColorBtn = document.getElementById('update-color-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const colorListContainer = document.getElementById('color-list-container');
+        const showcaseContainer = document.getElementById('showcase-container');
+        const sortByCategoryBtn = document.getElementById('sort-by-category-btn');
+        const clearAllBtn = document.getElementById('clear-all-btn');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        const importExcelBtn = document.getElementById('import-excel-btn');
+        const excelFileInput = document.getElementById('excel-file-input');
+        const saveShowcaseBtn = document.getElementById('save-showcase-btn');
+        const showcaseTitleInput = document.getElementById('showcase-title');
+        const showcaseDescriptionInput = document.getElementById('showcase-subtitle');
+        const includeDateCheckbox = document.getElementById('include-date-checkbox');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        function checkForDuplicate(name, excludeIndex = -1) {
+            // Check if a color with the same name already exists (case-insensitive)
+            for (let i = 0; i < colors.length; i++) {
+                // Skip the current editing index if we're updating
+                if (i === excludeIndex) continue;
+                
+                if (colors[i].name.toLowerCase() === name.toLowerCase()) {
+                    return {
+                        exists: true,
+                        index: i,
+                        color: colors[i]
+                    };
+                }
+            }
+            return { exists: false };
+        }
+
+
+        function formatColorValue(color, formatType) {
+            // Format a color object to the specified format
+            switch(formatType.toLowerCase()) {
+                case 'hex':
+                    return color.hex;
+                case 'rgb':
+                    return color.rgb;
+                case 'hsl':
+                    return color.hsl;
+                case 'hsb':
+                    return color.hsb;
+                default:
+                    return color.hex;
+            }
+        }
+
+        function formatColorValueFromRgb(rgb, formatType) {
+            // Format RGB object to the specified format
+            switch(formatType.toLowerCase()) {
+                case 'hex':
+                    return rgbToHex(rgb.r, rgb.g, rgb.b);
+                case 'rgb':
+                    return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+                case 'hsl':
+                    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+                    return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+                case 'hsb':
+                    const hsb = rgbToHsb(rgb.r, rgb.g, rgb.b);
+                    return `hsb(${hsb.h}, ${hsb.s}%, ${hsb.b}%)`;
+                default:
+                    return rgbToHex(rgb.r, rgb.g, rgb.b);
+            }
+        }
+
+
+        function sanitizeFilename(name) {
+            if (!name) return 'color-palette';
+            
+            // Remove invalid characters for filenames
+            return name
+                .replace(/[<>:"/\\|?*]/g, '-')  // Replace invalid characters with hyphens
+                .replace(/\s+/g, '-')           // Replace spaces with hyphens
+                .replace(/-+/g, '-')            // Replace multiple hyphens with single hyphen
+                .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+        }
+
+        function hexToRgb(hex) {
+            hex = hex.replace(/^#/, '');
+            if (hex.length === 3) {
+                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+            }
+            
+            const num = parseInt(hex, 16);
+            return {
+                r: (num >> 16) & 255,
+                g: (num >> 8) & 255,
+                b: num & 255
+            };
+        }
+        
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+        
+        function rgbToHsl(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+                h = s = 0; // achromatic
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                
+                h /= 6;
+            }
+            
+            // Apply 0.1 precision
+            return {
+                h: Math.round(h * 360 * 10) / 10,
+                s: Math.round(s * 100 * 10) / 10,
+                l: Math.round(l * 100 * 10) / 10
+            };
+        }
+        
+        function hslToRgb(h, s, l) {
+            h /= 360;
+            s /= 100;
+            l /= 100;
+            
+            let r, g, b;
+            
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            return {
+                r: Math.round(r * 255),
+                g: Math.round(g * 255),
+                b: Math.round(b * 255)
+            };
+        }
+        
+        function rgbToHsb(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const d = max - min;
+            
+            let h = 0;
+            if (d !== 0) {
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            
+            const s = max === 0 ? 0 : d / max;
+            const v = max;
+            
+            // Apply 0.1 precision
+            return {
+                h: Math.round(h * 360 * 10) / 10,
+                s: Math.round(s * 100 * 10) / 10,
+                b: Math.round(v * 100 * 10) / 10
+            };
+        }
+        
+        function parseColorValue(value, type) {
+            value = value.trim();
+            
+            if (type === 'hex') {
+                // Validate hex
+                const hexRegex = /^#?([0-9A-F]{3}|[0-9A-F]{6})$/i;
+                if (!hexRegex.test(value)) return null;
+                
+                if (!value.startsWith('#')) value = '#' + value;
+                return hexToRgb(value);
+            } 
+            else if (type === 'rgb') {
+                // Validate rgb
+                const rgbRegex = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i;
+                const match = value.match(rgbRegex);
+                if (!match) return null;
+                
+                const r = parseInt(match[1]);
+                const g = parseInt(match[2]);
+                const b = parseInt(match[3]);
+                
+                if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) return null;
+                
+                return { r, g, b };
+            }
+            else if (type === 'hsl') {
+                // Validate hsl with decimal support
+                const hslRegex = /^hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)$/i;
+                const match = value.match(hslRegex);
+                if (!match) return null;
+                
+                const h = parseFloat(match[1]);
+                const s = parseFloat(match[2]);
+                const l = parseFloat(match[3]);
+                
+                if (h < 0 || h > 360 || s < 0 || s > 100 || l < 0 || l > 100) return null;
+                
+                return hslToRgb(h, s, l);
+            }
+            
+            return null;
+        }
+        
+        function computeAllValues(rgb) {
+            const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+            const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+            const hsb = rgbToHsb(rgb.r, rgb.g, rgb.b);
+            
+            return {
+                hex: hex,
+                rgb: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
+                hsl: `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`,
+                hsb: `hsb(${hsb.h}, ${hsb.s}%, ${hsb.b}%)`,
+                rgbRaw: rgb,
+                hslRaw: hsl,
+                hsbRaw: hsb
+            };
+        }
+        
+        function updateColorPreview() {
+            const type = colorTypeSelect.value;
+            const value = colorValueInput.value.trim();
+            
+            if (!value) {
+                colorPreview.style.backgroundColor = '#f0f0f0';
+                return;
+            }
+            
+            const rgb = parseColorValue(value, type);
+            if (rgb) {
+                colorPreview.style.backgroundColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            } else {
+                colorPreview.style.backgroundColor = '#f0f0f0';
+            }
+        }
+        
+        function addColor() {
+            const name = colorNameInput.value.trim();
+            const category = colorCategoryInput.value.trim() || 'Uncategorized';
+            const type = colorTypeSelect.value;
+            const value = colorValueInput.value.trim();
+            
+            if (!name || !value) {
+                alert('Please provide both a name and a color value');
+                return;
+            }
+            
+            const rgb = parseColorValue(value, type);
+            if (!rgb) {
+                alert('Invalid color value. Please check the format.');
+                return;
+            }
+            
+            // Check for duplicate name
+            const duplicateCheck = checkForDuplicate(name);
+            if (duplicateCheck.exists) {
+                const duplicate = duplicateCheck.color;
+                const duplicateFormattedValue = formatColorValue(duplicate, type);
+                const newFormattedValue = formatColorValueFromRgb(rgb, type);
+                
+                if (!confirm(`${name} already exists in category ${duplicate.category} as ${duplicateFormattedValue}. Replace with ${newFormattedValue}?`)) {
+                    return; // User cancelled
+                }
+                
+                // Remove the duplicate
+                colors.splice(duplicateCheck.index, 1);
+            }
+            
+            const allValues = computeAllValues(rgb);
+            
+            const color = {
+                id: Date.now(),
+                name,
+                category,
+                originalValue: value,
+                originalType: type,
+                ...allValues
+            };
+            
+            colors.push(color);
+            saveToLocalStorage();
+            renderColorList();
+            renderShowcase();
+            clearForm();
+        }
+
+        function editColor(index) {
+            const color = colors[index];
+            
+            colorNameInput.value = color.name;
+            colorCategoryInput.value = color.category;
+            colorTypeSelect.value = color.originalType;
+            colorValueInput.value = color.originalValue;
+            
+            currentEditIndex = index;
+            
+            addColorBtn.style.display = 'none';
+            updateColorBtn.style.display = 'inline-block';
+            cancelEditBtn.style.display = 'inline-block';
+            
+            updateColorPreview();
+            
+            // Scroll to the form
+            document.querySelector('.left-panel').scrollIntoView({ behavior: 'smooth' });
+            colorValueInput.focus();
+        }
+        
+        function updateColor() {
+            if (currentEditIndex === -1) return;
+            
+            const name = colorNameInput.value.trim();
+            const category = colorCategoryInput.value.trim() || 'Uncategorized';
+            const type = colorTypeSelect.value;
+            const value = colorValueInput.value.trim();
+            
+            if (!name || !value) {
+                alert('Please provide both a name and a color value');
+                return;
+            }
+            
+            const rgb = parseColorValue(value, type);
+            if (!rgb) {
+                alert('Invalid color value. Please check the format.');
+                return;
+            }
+            
+            // Check for duplicate name (excluding current index)
+            const duplicateCheck = checkForDuplicate(name, currentEditIndex);
+            if (duplicateCheck.exists) {
+                const duplicate = duplicateCheck.color;
+                const duplicateFormattedValue = formatColorValue(duplicate, type);
+                const newFormattedValue = formatColorValueFromRgb(rgb, type);
+                
+                if (!confirm(`${name} already exists in category ${duplicate.category} as ${duplicateFormattedValue}. Replace with ${newFormattedValue}?`)) {
+                    return; // User cancelled
+                }
+                
+                // Remove the duplicate (but keep the current one we're editing)
+                colors.splice(duplicateCheck.index, 1);
+                
+                // If the duplicate was before our current index, adjust the currentEditIndex
+                if (duplicateCheck.index < currentEditIndex) {
+                    currentEditIndex--;
+                }
+            }
+            
+            const allValues = computeAllValues(rgb);
+            
+            colors[currentEditIndex] = {
+                id: colors[currentEditIndex].id,
+                name,
+                category,
+                originalValue: value,
+                originalType: type,
+                ...allValues
+            };
+            
+            saveToLocalStorage();
+            renderColorList();
+            renderShowcase();
+            cancelEdit();
+        }
+        function cancelEdit() {
+            currentEditIndex = -1;
+            clearForm();
+            
+            addColorBtn.style.display = 'inline-block';
+            updateColorBtn.style.display = 'none';
+            cancelEditBtn.style.display = 'none';
+        }
+        
+        function deleteColor(index) {
+            if (confirm('Are you sure you want to delete this color?')) {
+                colors.splice(index, 1);
+                saveToLocalStorage();
+                renderColorList();
+                renderShowcase();
+                
+                if (currentEditIndex === index) {
+                    cancelEdit();
+                }
+            }
+        }
+        
+        function clearForm() {
+            colorNameInput.value = '';
+            colorCategoryInput.value = '';
+            colorTypeSelect.value = 'hex';
+            colorValueInput.value = '';
+            updateColorPreview();
+            colorNameInput.focus();
+        }
+        
+        function saveToLocalStorage() {
+            localStorage.setItem('colorPalette', JSON.stringify(colors));
+        }
+        
+        function renderColorList() {
+            if (colors.length === 0) {
+                colorListContainer.innerHTML = '<div class="empty-message">No colors added yet. Start by adding a color above.</div>';
+                return;
+            }
+            
+            colorListContainer.innerHTML = '';
+            
+            colors.forEach((color, index) => {
+                const colorItem = document.createElement('div');
+                colorItem.className = 'color-item';
+                colorItem.setAttribute('data-index', index);
+                colorItem.setAttribute('draggable', 'true');
+                
+                colorItem.innerHTML = `
+                    <div class="drag-handle">↕️</div>
+                    <div class="color-item-preview" style="background-color: ${color.hex}"></div>
+                    <div class="color-item-info">
+                        <div class="color-item-name">${color.name}</div>
+                        <div class="color-item-category">${color.category}</div>
+                    </div>
+                    <div class="color-item-actions">
+                        <button class="action-btn btn-primary" data-action="edit">✎</button>
+                        <button class="action-btn btn-danger" data-action="delete">X</button>
+                    </div>
+                `;
+                
+                colorListContainer.appendChild(colorItem);
+                
+                // Add event listeners for drag and drop
+                colorItem.addEventListener('dragstart', handleDragStart);
+                colorItem.addEventListener('dragover', handleDragOver);
+                colorItem.addEventListener('drop', handleDrop);
+                colorItem.addEventListener('dragend', handleDragEnd);
+            });
+            
+            // Add event listeners for edit and delete buttons
+            document.querySelectorAll('.color-item-actions button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.closest('.color-item').getAttribute('data-index'));
+                    const action = this.getAttribute('data-action');
+                    
+                    if (action === 'edit') {
+                        editColor(index);
+                    } else if (action === 'delete') {
+                        deleteColor(index);
+                    }
+                });
+            });
+        }
+        
+        // Drag and drop functionality
+        let draggedItem = null;
+        
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            if (draggedItem !== this) {
+                const fromIndex = parseInt(draggedItem.getAttribute('data-index'));
+                const toIndex = parseInt(this.getAttribute('data-index'));
+                
+                // Move the color in the array
+                const [movedColor] = colors.splice(fromIndex, 1);
+                colors.splice(toIndex, 0, movedColor);
+                
+                saveToLocalStorage();
+                renderColorList();
+                renderShowcase();
+            }
+        }
+        
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedItem = null;
+        }
+        
+        function renderShowcase() {
+            if (colors.length === 0) {
+                showcaseContainer.innerHTML = '<div class="empty-message">Colors will appear here when added. Grouped by category.</div>';
+                return;
+            }
+            
+            // Group colors by category while preserving order
+            const colorsByCategory = {};
+            const categoryOrder = [];
+            
+            colors.forEach(color => {
+                if (!colorsByCategory[color.category]) {
+                    colorsByCategory[color.category] = [];
+                    categoryOrder.push(color.category);
+                }
+                colorsByCategory[color.category].push(color);
+            });
+            
+            // Remove duplicates from categoryOrder while preserving order
+            const uniqueCategories = [];
+            categoryOrder.forEach(category => {
+                if (!uniqueCategories.includes(category)) {
+                    uniqueCategories.push(category);
+                }
+            });
+            
+            showcaseContainer.innerHTML = '';
+            
+            uniqueCategories.forEach(category => {
+                const categorySection = document.createElement('div');
+                categorySection.className = 'category-section';
+                
+                // Create category header with edit icon
+                const categoryHeader = document.createElement('div');
+                categoryHeader.className = 'category-header';
+                categoryHeader.innerHTML = `
+                    <span class="category-title">${category}</span>
+                    <span class="category-edit-icon">✎</span>
+                `;
+                
+                // Add click event for category editing
+                categoryHeader.addEventListener('click', function() {
+                    if (editingCategory === category) return; // Already editing
+                    
+                    startCategoryEdit(category, this);
+                });
+                
+                const colorDisplay = document.createElement('div');
+                colorDisplay.className = 'color-display';
+                
+                colorsByCategory[category].forEach(color => {
+                    const colorIndex = colors.findIndex(c => c.id === color.id);
+                    const colorCard = document.createElement('div');
+                    colorCard.className = 'color-card';
+                    
+                    colorCard.innerHTML = `
+                        <div class="color-swatch" style="background-color: ${color.hex}" data-index="${colorIndex}">
+                            <div class="edit-overlay">
+                                <div class="edit-icon">✎</div>
+                            </div>
+                        </div>
+                        <div class="color-values">
+                            <div class="color-name" title="Copy '${color.name}' to clipboard" data-copy="${color.name}">${color.name}</div>
+                            <div class="color-value-row">
+                                <span class="value-content" title="Copy '${color.hex}' to clipboard" data-copy="${color.hex}">${color.hex}</span>
+                            </div>
+                            <div class="color-value-row">
+                                <span class="value-content" title="Copy '${color.rgb}' to clipboard" data-copy="${color.rgb}">${color.rgb}</span>
+                            </div>
+                            <div class="color-value-row">
+                                <span class="value-content" title="Copy '${color.hsl}' to clipboard" data-copy="${color.hsl}">${color.hsl}</span>
+                            </div>
+                            <div class="color-value-row">
+                                <span class="value-content" title="Copy '${color.hsb}' to clipboard" data-copy="${color.hsb}">${color.hsb}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add click event to the color swatch for editing
+                    const swatch = colorCard.querySelector('.color-swatch');
+                    swatch.addEventListener('click', function(e) {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        editColor(index);
+                    });
+                    
+                    colorDisplay.appendChild(colorCard);
+
+                    // Add click-to-copy functionality to all copyable elements
+                    const copyableElements = colorCard.querySelectorAll('[data-copy]');
+                    copyableElements.forEach(element => {
+                        element.addEventListener('click', function(e) {
+                            e.stopPropagation(); // Prevent triggering the color edit
+                            
+                            const textToCopy = this.getAttribute('data-copy');
+                            const originalText = this.textContent;
+                            
+                            // Store the original text as a data attribute if not already stored
+                            if (!this.hasAttribute('data-original')) {
+                                this.setAttribute('data-original', originalText);
+                            }
+                            
+                            // Use the Clipboard API
+                            navigator.clipboard.writeText(textToCopy).then(() => {
+                                // Change the displayed text to "Copied!"
+                                this.textContent = 'Copied!';
+                                
+                                // Restore original text after 1 second
+                                setTimeout(() => {
+                                    const storedOriginal = this.getAttribute('data-original');
+                                    this.textContent = storedOriginal || originalText;
+                                }, 1000);
+                                
+                            }).catch(err => {
+                                console.error('Failed to copy: ', err);
+                                // Fallback for older browsers
+                                const textArea = document.createElement('textarea');
+                                textArea.value = textToCopy;
+                                document.body.appendChild(textArea);
+                                textArea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textArea);
+                                
+                                // Change the displayed text to "Copied!" even with fallback
+                                this.textContent = 'Copied!';
+                                
+                                // Restore original text after 1 second
+                                setTimeout(() => {
+                                    const storedOriginal = this.getAttribute('data-original');
+                                    this.textContent = storedOriginal || originalText;
+                                }, 1000);
+                            });
+                        });
+                        
+                        // Optional: Add hover effect styling
+                        element.style.cursor = 'pointer';
+                        element.addEventListener('mouseenter', function() {
+                            this.style.textDecoration = 'underline';
+                        });
+                        element.addEventListener('mouseleave', function() {
+                            this.style.textDecoration = 'none';
+                        });
+                    });
+
+
+                });
+                
+                categorySection.appendChild(categoryHeader);
+                categorySection.appendChild(colorDisplay);
+                showcaseContainer.appendChild(categorySection);
+            });
+        }
+        
+        function startCategoryEdit(oldCategory, headerElement) {
+            // If already editing another category, save it first
+            if (editingCategory !== null && editingCategory !== oldCategory) {
+                saveCategoryEdit();
+            }
+            
+            editingCategory = oldCategory;
+            
+            // Replace header with input field
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'category-edit-input';
+            input.value = oldCategory;
+            
+            headerElement.innerHTML = '';
+            headerElement.appendChild(input);
+            
+            // Focus and select the text
+            input.focus();
+            input.select();
+            
+            // Handle Enter key to save
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    saveCategoryEdit();
+                } else if (e.key === 'Escape') {
+                    cancelCategoryEdit(oldCategory, headerElement);
+                }
+            });
+            
+            // Handle blur to save
+            input.addEventListener('blur', function() {
+                saveCategoryEdit();
+            });
+        }
+        
+        function saveCategoryEdit() {
+            if (editingCategory === null) return;
+            
+            const header = document.querySelector('.category-header input');
+            if (!header) return;
+            
+            const newCategory = header.value.trim() || 'Uncategorized';
+            
+            if (newCategory !== editingCategory) {
+                // Update all colors with the old category
+                colors.forEach(color => {
+                    if (color.category === editingCategory) {
+                        color.category = newCategory;
+                    }
+                });
+                
+                saveToLocalStorage();
+                renderColorList();
+                renderShowcase();
+            } else {
+                // Just re-render without changes
+                renderShowcase();
+            }
+            
+            editingCategory = null;
+        }
+        
+        function cancelCategoryEdit(oldCategory, headerElement) {
+            editingCategory = null;
+            renderShowcase(); // Re-render to go back to normal view
+        }
+        
+        function sortByCategory() {
+            colors.sort((a, b) => {
+                if (a.category.toLowerCase() < b.category.toLowerCase()) return -1;
+                if (a.category.toLowerCase() > b.category.toLowerCase()) return 1;
+                return 0;
+            });
+            
+            saveToLocalStorage();
+            renderColorList();
+            renderShowcase();
+        }
+        
+        function clearAllColors() {
+            if (colors.length === 0) {
+                alert('No colors to clear.');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to clear all colors? This cannot be undone.')) {
+                colors = [];
+                saveToLocalStorage();
+                renderColorList();
+                renderShowcase();
+                cancelEdit();
+            }
+        }
+        
+        // Contrast calculation functions from contrast-report.html
+        function getContrastRatio(color1, color2) {
+            // Convert hex to RGB
+            const rgb1 = hexToRgb(color1);
+            const rgb2 = hexToRgb(color2);
+            
+            // Calculate relative luminance
+            const luminance1 = getRelativeLuminance(rgb1);
+            const luminance2 = getRelativeLuminance(rgb2);
+            
+            // Calculate contrast ratio
+            const lighter = Math.max(luminance1, luminance2);
+            const darker = Math.min(luminance1, luminance2);
+            
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+        
+        function getRelativeLuminance(rgb) {
+            const sRGB = [rgb.r / 255, rgb.g / 255, rgb.b / 255];
+            
+            const sRGBAdjusted = sRGB.map(val => {
+                return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+            });
+            
+            return 0.2126 * sRGBAdjusted[0] + 0.7152 * sRGBAdjusted[1] + 0.0722 * sRGBAdjusted[2];
+        }
+        
+        function getContrastColor(contrast) {
+            if (contrast >= 7) return 'C6EFCE'; // Light green for good contrast
+            if (contrast >= 4.5) return 'FFEB9C'; // Light yellow/orange for ok contrast
+            return 'FFC7CE'; // Light red for poor contrast
+        }
+        
+        function getContrastQuality(contrast) {
+            if (contrast >= 7) return 'green';
+            if (contrast >= 4.5) return 'yellow';
+            return 'red';
+        }
+        
+        async function exportToExcel() {
+            if (colors.length === 0) {
+                alert('No colors to export.');
+                return;
+            }
+            
+            loadingOverlay.style.display = 'flex';
+            
+            try {
+                // Create a new workbook
+                const workbook = new ExcelJS.Workbook();
+                workbook.creator = 'Color Palette Manager';
+                workbook.created = new Date();
+                
+                // ========== SHEET 1: PALETTE ==========
+                const paletteSheet = workbook.addWorksheet('Palette');
+                
+                // Set column widths and headers
+                paletteSheet.columns = [
+                    { header: 'Name', key: 'name', width: 15 },
+                    { header: 'Category', key: 'category', width: 15 },
+                    { header: 'HEX', key: 'hex', width: 15 },
+                    { header: 'Example', key: 'example', width: 10 }
+                ];
+                
+                // Style the header row
+                const paletteHeaderRow = paletteSheet.getRow(1);
+                paletteHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                paletteHeaderRow.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF2C3E50' }
+                };
+                paletteHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+                
+                // Add color data
+                let rowNumber = 2;
+                colors.forEach(color => {
+                    const row = paletteSheet.getRow(rowNumber);
+                    const hexValue = color.hex.startsWith('#') ? color.hex : `#${color.hex}`;
+                    
+                    row.values = {
+                        name: color.name,
+                        category: color.category,
+                        hex: hexValue,
+                        example: ''
+                    };
+                    
+                    // Style the example cell with the color
+                    const exampleCell = row.getCell('example');
+                    exampleCell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FF' + color.hex.substring(1) }
+                    };
+                    exampleCell.font = {
+                        bold: true,
+                        color: { argb: getTextColorForBackground(color.hex) }
+                    };
+                    exampleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    
+                    // Add borders
+                    ['A', 'B', 'C', 'D'].forEach(col => {
+                        const cell = row.getCell(col);
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                    
+                    rowNumber++;
+                });
+                
+                // ========== SHEET 2: CONTRAST REPORT ==========
+                const contrastSheet = workbook.addWorksheet('Contrast Report');
+                
+                // Create header row with background colors
+                const headerRow2 = contrastSheet.addRow(['Background HEX', 'Background Name', 'Text HEX', 'Text Name', 'Contrast Ratio', 'Example']);
+                headerRow2.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                headerRow2.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF2C3E50' }
+                };
+                headerRow2.alignment = { vertical: 'middle', horizontal: 'center' };
+                
+                // Set column widths
+                contrastSheet.columns = [
+                    { width: 15 },
+                    { width: 20 },
+                    { width: 15 },
+                    { width: 20 },
+                    { width: 15 },
+                    { width: 25 }
+                ];
+                
+                // Generate all combinations
+                let contrastRowNumber = 2;
+                let greenCount = 0, yellowCount = 0, redCount = 0;
+                
+                for (const bgColor of colors) {
+                    for (const textColor of colors) {
+                        const contrast = getContrastRatio(textColor.hex, bgColor.hex);
+                        const quality = getContrastQuality(contrast);
+                        
+                        // Count by quality
+                        if (quality === 'green') greenCount++;
+                        else if (quality === 'yellow') yellowCount++;
+                        else redCount++;
+                        
+                        const row = contrastSheet.addRow([
+                            bgColor.hex,
+                            bgColor.name,
+                            textColor.hex,
+                            textColor.name,
+                            contrast.toFixed(2),
+                            'Sample Text'
+                        ]);
+                        
+                        // Style the contrast cell based on contrast ratio
+                        const contrastCell = row.getCell(5);
+                        contrastCell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FF' + getContrastColor(contrast) }
+                        };
+                        contrastCell.font = { bold: true };
+                        contrastCell.alignment = { vertical: 'middle', horizontal: 'center' };
+                        
+                        // Style the example cell with background and text colors
+                        const exampleCell = row.getCell(6);
+                        exampleCell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FF' + bgColor.hex.substring(1) }
+                        };
+                        exampleCell.font = {
+                            color: { argb: 'FF' + textColor.hex.substring(1) },
+                            bold: true
+                        };
+                        exampleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+                        
+                        // Add borders to all cells
+                        for (let i = 1; i <= 6; i++) {
+                            const cell = row.getCell(i);
+                            cell.border = {
+                                top: { style: 'thin' },
+                                left: { style: 'thin' },
+                                bottom: { style: 'thin' },
+                                right: { style: 'thin' }
+                            };
+                        }
+                        
+                        contrastRowNumber++;
+                    }
+                }
+                
+                // ========== SHEET 3: SUMMARY ==========
+                const summarySheet = workbook.addWorksheet('Summary');
+                
+                // Format date and time
+                const now = new Date();
+                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const timeZoneAbbr = getTimeZoneAbbreviation(timeZone);
+                const formattedDateTime = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} ${timeZoneAbbr}`;
+                
+                // Add summary data
+                const totalColors = colors.length;
+                const totalCombinations = totalColors * totalColors;
+                
+                // Count colors by category
+                const categoryCounts = {};
+                colors.forEach(color => {
+                    categoryCounts[color.category] = (categoryCounts[color.category] || 0) + 1;
+                });
+                
+                summarySheet.columns = [
+                    { header: 'Metric', key: 'metric', width: 35 },
+                    { header: 'Value', key: 'value', width: 25 }
+                ];
+                
+                // Style header
+                const summaryHeader = summarySheet.getRow(1);
+                summaryHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                summaryHeader.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF2C3E50' }
+                };
+                summaryHeader.alignment = { vertical: 'middle', horizontal: 'center' };
+                
+                // Add summary rows
+                const summaryData = [
+                    ['Title', showcaseTitleInput.value.trim() || 'Color Palette'],
+                    ['Subtitle', showcaseDescriptionInput.value.trim() || ''],
+                    ['', ''],
+                    ['Total Colors', totalColors],
+                    ['Total Combinations', totalCombinations],
+                    ['Good Contrast (≥ 7:1)', greenCount],
+                    ['Mid Contrast (4.5:1 - 7:1)', yellowCount],
+                    ['Poor Contrast (< 4.5:1)', redCount],
+                    ['', ''],
+                    ['Colors by Category', '']
+                ];
+                
+                // Add category counts
+                Object.entries(categoryCounts).forEach(([category, count]) => {
+                    summaryData.push([`  ${category}`, count]);
+                });
+                
+                summaryData.push(
+                    ['', ''],
+                    ['Generated on', formattedDateTime]
+                );
+                
+                // Populate summary sheet
+                summaryData.forEach(([metric, value], index) => {
+                    const row = summarySheet.addRow({ metric, value });
+                    
+                    // Style the rows
+                    if (index === 0) {
+                        // This is actually row 2 because header is row 1
+                        row.font = { bold: true };
+                    }
+                    
+                    // Add borders
+                    row.getCell('metric').border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    row.getCell('value').border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+                
+
+                // ========== SHEET 4: DETAILS ==========
+                const detailsSheet = workbook.addWorksheet('Details');
+
+                // Set column headers
+                detailsSheet.columns = [
+                    { header: 'Name', key: 'name', width: 15 },
+                    { header: 'Category', key: 'category', width: 15 },
+                    { header: 'Example', key: 'example', width: 10 },
+                    { header: 'HEX', key: 'hex', width: 10 },
+                    { header: 'R (RGB)', key: 'r', width: 10 },
+                    { header: 'G (RGB)', key: 'g', width: 10 },
+                    { header: 'B (RGB)', key: 'b', width: 10 },
+                    { header: 'H (HSB)', key: 'h_hsb', width: 10 },
+                    { header: 'S (HSB)', key: 's_hsb', width: 10 },
+                    { header: 'B (HSB)', key: 'b_hsb', width: 10 },
+                    { header: 'H (HSL)', key: 'h_hsl', width: 10 },
+                    { header: 'S (HSL)', key: 's_hsl', width: 10 },
+                    { header: 'L (HSL)', key: 'l_hsl', width: 10 }
+                ];
+
+                // Style the header row
+                const detailsHeaderRow = detailsSheet.getRow(1);
+                detailsHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                detailsHeaderRow.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF2C3E50' }
+                };
+                detailsHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+                // Add color data
+                let detailsRowNumber = 2;
+                colors.forEach(color => {
+                    const row = detailsSheet.getRow(detailsRowNumber);
+                    
+                    row.values = {
+                        name: color.name,
+                        category: color.category,
+                        example: '', // Leave blank for coloring
+                        hex: color.hex,
+                        r: color.rgbRaw.r,
+                        g: color.rgbRaw.g,
+                        b: color.rgbRaw.b,
+                        h_hsb: color.hsbRaw.h,
+                        s_hsb: color.hsbRaw.s,
+                        b_hsb: color.hsbRaw.b,
+                        h_hsl: color.hslRaw.h,
+                        s_hsl: color.hslRaw.s,
+                        l_hsl: color.hslRaw.l
+                    };
+                    
+                    // Style the example cell with the color
+                    const exampleCell = row.getCell('example');
+                    exampleCell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FF' + color.hex.substring(1) }
+                    };
+                    exampleCell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    
+                    // Add borders to all cells
+                    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'].forEach(col => {
+                        const cell = row.getCell(col);
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                        
+                        // Center align numeric values
+                        if (['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'].includes(col)) {
+                            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                        }
+                    });
+                    
+                    detailsRowNumber++;
+                });
+
+                // Auto-fit columns for better printing
+                detailsSheet.columns.forEach(column => {
+                    if (column.key && column.key !== 'example') {
+                        column.width = Math.max(column.width || 0, column.header.length + 2);
+                    }
+                });
+                // Generate Excel file
+                const buffer = await workbook.xlsx.writeBuffer();
+                
+                // Create a blob and download
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                
+                // Get title for filename or use default
+                let fileName = showcaseTitleInput.value.trim();
+                if (!fileName) fileName = 'Color Palette';
+
+                // Clean filename (remove invalid characters)
+                fileName = fileName.replace(/[<>:"/\\|?*]/g, '-').replace(/\s+/g, '-');
+
+                // Get current date for filename if included in export
+                const includeDate = includeDateCheckbox.checked;
+                if (includeDate) {
+                    const dateStr = now.toISOString().split('T')[0];
+                    fileName = `${fileName}-${dateStr}.xlsx`;
+                } else {
+                    fileName = `${fileName}.xlsx`;
+                }
+
+                saveAs(blob, fileName);                
+            } catch (error) {
+                console.error('Error generating Excel file:', error);
+                alert('Error generating Excel file. Please try again.');
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+        
+        function getTextColorForBackground(hexColor) {
+            // Convert hex to RGB
+            const rgb = hexToRgb(hexColor);
+            
+            // Calculate relative luminance
+            const luminance = getRelativeLuminance(rgb);
+            
+            // Return white for dark backgrounds, black for light backgrounds
+            return luminance > 0.179 ? 'FF000000' : 'FFFFFFFF';
+        }
+        
+        function getTimeZoneAbbreviation(timeZone) {
+            // Simple mapping of common time zones
+            const tzMap = {
+                'America/New_York': 'EST',
+                'America/Chicago': 'CST',
+                'America/Denver': 'MST',
+                'America/Los_Angeles': 'PST',
+                'America/Phoenix': 'MST',
+                'America/Anchorage': 'AKST',
+                'America/Honolulu': 'HST',
+                'Europe/London': 'GMT',
+                'Europe/Paris': 'CET',
+                'Europe/Berlin': 'CET',
+                'Asia/Tokyo': 'JST',
+                'Asia/Shanghai': 'CST',
+                'Australia/Sydney': 'AEDT',
+                'Pacific/Auckland': 'NZDT'
+            };
+            
+            return tzMap[timeZone] || timeZone.split('/').pop().substring(0, 3).toUpperCase();
+        }
+        
+        async function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            loadingOverlay.style.display = 'flex';
+            
+            try {
+                // Check file extension
+                const fileName = file.name.toLowerCase();
+                
+                if (fileName.endsWith('.csv')) {
+                    // Handle CSV import (legacy format)
+                    await importFromCSV(file);
+                } else if (fileName.endsWith('.xlsx')) {
+                    // Handle Excel import
+                    await importFromXLSX(file);
+                } else {
+                    alert('Please select a .csv or .xlsx file.');
+                }
+                
+            } catch (error) {
+                console.error('Error importing file:', error);
+                alert('Error importing file. Please make sure it is in the correct format.');
+            } finally {
+                loadingOverlay.style.display = 'none';
+                excelFileInput.value = '';
+            }
+        }
+        
+        async function importFromCSV(file) {
+            const reader = new FileReader();
+            
+            return new Promise((resolve, reject) => {
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    const lines = content.split('\n');
+                    
+                    // Skip the header row
+                    const importedColors = [];
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+                        
+                        // Simple CSV parsing
+                        const parts = line.split(',');
+                        if (parts.length < 3) continue;
+                        
+                        const name = parts[0].replace(/"/g, '').trim();
+                        const category = parts[1].replace(/"/g, '').trim() || 'Uncategorized';
+                        const value = parts[2].replace(/"/g, '').trim();
+                        
+                        // Try to detect color type
+                        let type = 'hex';
+                        if (value.startsWith('rgb(')) type = 'rgb';
+                        if (value.startsWith('hsl(')) type = 'hsl';
+                        
+                        const rgb = parseColorValue(value, type);
+                        if (!rgb) continue;
+                        
+                        const allValues = computeAllValues(rgb);
+                        
+                        importedColors.push({
+                            id: Date.now() + i,
+                            name,
+                            category,
+                            originalValue: value,
+                            originalType: type,
+                            ...allValues
+                        });
+                    }
+                    
+                    if (importedColors.length > 0) {
+                        colors.push(...importedColors);
+                        saveToLocalStorage();
+                        renderColorList();
+                        renderShowcase();
+                    } else {
+                        alert('No valid colors found in the CSV file.');
+                    }
+                    
+                    resolve();
+                };
+                
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+        
+        async function importFromXLSX(file) {
+            const reader = new FileReader();
+            
+            return new Promise((resolve, reject) => {
+                reader.onload = async function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = new ExcelJS.Workbook();
+                        await workbook.xlsx.load(data);
+                        
+                        let importedColors = [];
+                        
+                        // Try to read from Palette sheet first
+                        const paletteSheet = workbook.getWorksheet('Palette');
+                        if (paletteSheet) {
+                            paletteSheet.eachRow((row, rowNumber) => {
+                                if (rowNumber === 1) return; // Skip header
+                                
+                                const name = row.getCell('A').value?.toString()?.trim() || row.getCell(1).value?.toString()?.trim();
+                                const category = row.getCell('B').value?.toString()?.trim() || row.getCell(2).value?.toString()?.trim() || 'Uncategorized';
+                                let value = row.getCell('C').value?.toString()?.trim() || row.getCell(3).value?.toString()?.trim();
+                                
+                                if (name && value) {
+                                    // Ensure hex value has #
+                                    if (!value.startsWith('#')) value = '#' + value;
+                                    
+                                    // Try to detect color type
+                                    let type = 'hex';
+                                    if (value.startsWith('rgb(')) type = 'rgb';
+                                    if (value.startsWith('hsl(')) type = 'hsl';
+                                    
+                                    const rgb = parseColorValue(value, type);
+                                    if (rgb) {
+                                        const allValues = computeAllValues(rgb);
+                                        
+                                        importedColors.push({
+                                            id: Date.now() + rowNumber,
+                                            name,
+                                            category,
+                                            originalValue: value,
+                                            originalType: type,
+                                            ...allValues
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                        
+                        // If no Palette sheet, try to read from first sheet
+                        if (importedColors.length === 0) {
+                            const firstSheet = workbook.worksheets[0];
+                            if (firstSheet) {
+                                firstSheet.eachRow((row, rowNumber) => {
+                                    if (rowNumber === 1) return; // Skip header
+                                    
+                                    const name = row.getCell(1).value?.toString()?.trim();
+                                    const category = row.getCell(2).value?.toString()?.trim() || 'Uncategorized';
+                                    let value = row.getCell(3).value?.toString()?.trim();
+                                    
+                                    if (name && value) {
+                                        // Ensure hex value has #
+                                        if (!value.startsWith('#')) value = '#' + value;
+                                        
+                                        // Try to detect color type
+                                        let type = 'hex';
+                                        if (value.startsWith('rgb(')) type = 'rgb';
+                                        if (value.startsWith('hsl(')) type = 'hsl';
+                                        
+                                        const rgb = parseColorValue(value, type);
+                                        if (rgb) {
+                                            const allValues = computeAllValues(rgb);
+                                            
+                                            importedColors.push({
+                                                id: Date.now() + rowNumber,
+                                                name,
+                                                category,
+                                                originalValue: value,
+                                                originalType: type,
+                                                ...allValues
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                        
+                        if (importedColors.length > 0) {
+                            colors.push(...importedColors);
+                            saveToLocalStorage();
+                            renderColorList();
+                            renderShowcase();
+                        } else {
+                            alert('No valid colors found in the Excel file. Please make sure it has the correct format.');
+                        }
+
+                        // Check Summary sheet for Title and Subtitle
+                        const summarySheet = workbook.getWorksheet('Summary');
+                        if (summarySheet) {
+                            let title = '';
+                            let subtitle = '';
+                            
+                            summarySheet.eachRow((row, rowNumber) => {
+                                const metric = row.getCell(1).value?.toString()?.trim();
+                                const value = row.getCell(2).value?.toString()?.trim();
+                                
+                                if (metric === 'Title' && value) {
+                                    title = value;
+                                } else if (metric === 'Subtitle' && value) {
+                                    subtitle = value;
+                                }
+                            });
+                            
+                            // Pre-fill the form fields
+                            if (title) {
+                                showcaseTitleInput.value = title;
+                            }
+                            if (subtitle) {
+                                showcaseDescriptionInput.value = subtitle;
+                            }
+                        }
+
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        function saveShowcaseAsHtml() {
+            if (colors.length === 0) {
+                alert('No colors to save.');
+                return;
+            }
+            
+            const title = showcaseTitleInput.value.trim() || 'Color Palette';
+            const description = showcaseDescriptionInput.value.trim() || title;
+            const includeDate = includeDateCheckbox.checked;
+            
+            // Create HTML content for the showcase
+            let htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #ffffff;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e6ed;
+        }
+        
+        h1 {
+            color: #000000;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto 5px;
+        }
+        
+        .subtitle {
+            color: #000000;
+            font-size: 1rem;
+            font-style: italic;
+        }
+        
+        .category-section {
+            margin-bottom: 30px;
+        }
+        
+        .category-header {
+            font-size: 1.4rem;
+            color: #2c3e50;
+            background-color: #f0f0f0;
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .color-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        
+        .color-card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        
+        .color-swatch {
+            height: 80px;
+            position: relative;
+        }
+        
+        .color-values {
+            padding: 10px;
+        }
+        
+        .color-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .color-value-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .value-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .value-content {
+            font-family: monospace;
+            color: #333;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>${title}</h1>
+            <p class="description">${description}</p>`;
+            
+            if (includeDate) {
+                htmlContent += `<p class="subtitle">Generated on ${new Date().toLocaleDateString()}</p>`;
+            }
+            
+            htmlContent += `</header>`;
+            
+            // Group colors by category while preserving order
+            const colorsByCategory = {};
+            const categoryOrder = [];
+            
+            colors.forEach(color => {
+                if (!colorsByCategory[color.category]) {
+                    colorsByCategory[color.category] = [];
+                    categoryOrder.push(color.category);
+                }
+                colorsByCategory[color.category].push(color);
+            });
+            
+            // Remove duplicates from categoryOrder while preserving order
+            const uniqueCategories = [];
+            categoryOrder.forEach(category => {
+                if (!uniqueCategories.includes(category)) {
+                    uniqueCategories.push(category);
+                }
+            });
+            
+            // Add color sections in the same order as in the app
+            uniqueCategories.forEach(category => {
+                htmlContent += `
+        <div class="category-section">
+            <h3 class="category-header">${category}</h3>
+            <div class="color-display">`;
+                
+                colorsByCategory[category].forEach(color => {
+                    htmlContent += `
+                <div class="color-card">
+                    <div class="color-swatch" style="background-color: ${color.hex}"></div>
+                    <div class="color-values">
+                        <div class="color-name">${color.name}</div>
+                        <div class="color-value-row">
+                            <span class="value-content">${color.hex}</span>
+                        </div>
+                        <div class="color-value-row">
+                            <span class="value-content">${color.rgb}</span>
+                        </div>
+                        <div class="color-value-row">
+                            <span class="value-content">${color.hsl}</span>
+                        </div>
+                        <div class="color-value-row">
+                            <span class="value-content">${color.hsb}</span>
+                        </div>
+                    </div>
+                </div>`;
+                });
+                
+                htmlContent += `
+            </div>
+        </div>`;
+            });
+            
+            htmlContent += `
+        <footer>
+            <p>${title} &copy; ${new Date().getFullYear()}</p>
+        </footer>
+    </div>
+</body>
+</html>`;
+            
+            // Get title for filename or use default
+            let fileName = title.replace(/[<>:"/\\|?*]/g, '-').replace(/\s+/g, '-');
+
+            // Add date to filename if included
+            if (includeDate) {
+                const dateStr = new Date().toISOString().split('T')[0];
+                fileName = `${fileName}-${dateStr}.html`;
+            } else {
+                fileName = `${fileName}.html`;
+            }
+
+            // Create and download the file
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize event listeners
+        colorValueInput.addEventListener('input', updateColorPreview);
+        colorTypeSelect.addEventListener('change', updateColorPreview);
+        
+        addColorBtn.addEventListener('click', addColor);
+        updateColorBtn.addEventListener('click', updateColor);
+        cancelEditBtn.addEventListener('click', cancelEdit);
+        
+        sortByCategoryBtn.addEventListener('click', sortByCategory);
+        clearAllBtn.addEventListener('click', clearAllColors);
+        
+        exportExcelBtn.addEventListener('click', exportToExcel);
+        importExcelBtn.addEventListener('click', () => excelFileInput.click());
+        excelFileInput.addEventListener('change', importFromExcel);
+        
+        saveShowcaseBtn.addEventListener('click', saveShowcaseAsHtml);
+
+        // Load any saved colors on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            renderColorList();
+            renderShowcase();
+            updateColorPreview();
+            
+            // Set default showcase title
+            showcaseTitleInput.value = 'Color Palette';
+        });
+    </script>
+</body>
+</html>
