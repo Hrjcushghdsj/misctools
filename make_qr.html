@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Code Generator</title>
+<style>
+/* ==========================================================================
+   1. THEME TOKENS
+   --------------------------------------------------------------------------
+   Everything visual about the page is driven by the variables below.
+   Change a value here and the whole page follows.
+   ========================================================================== */
+:root{
+  /* ---- Surfaces ---- */
+  --bg:             #101010;   /* page background                        */
+  --panel:          #202020;   /* cards / panels                         */
+  --panel-2:        #303030;   /* secondary surfaces (chips, toggles)    */
+  --panel-3:        #1e1e1e;   /* list boxes, deep wells                 */
+  --panel-input:    #161616;   /* text inputs inside list boxes          */
+
+  /* ---- Lines & text ---- */
+  --border:         #a0a0a0;
+  --text:           #ffffff;
+  --muted:          #9d9d9d;
+
+  /* ---- Accents ---- */
+  --primary:        #375a7f;
+  --primary-text:   #ffffff;
+  --secondary:      #444444;
+  --success:        #00bc8c;
+  --success-text:   #0b2b24;
+  --danger:         #e74c3c;
+  --warning:        #f39c12;
+  --info:           #3498db;
+
+  /* ---- Shape & spacing ---- */
+  --radius:         10px;
+  --radius-sm:      6px;
+  --radius-xs:      4px;
+  --pad:            18px;
+  --gap:            20px;
+  --max-width:      1180px;
+
+  /* ---- Typography ---- */
+  --font:           "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono:      ui-monospace, Consolas, monospace;
+  --font-size:      14px;
+  --font-size-sm:   12px;
+  --font-size-xs:   11.5px;
+
+  /* ---- Effects ---- */
+  --overlay:        rgba(0,0,0,.65);
+  --shadow-modal:   0 20px 60px rgba(0,0,0,.6);
+  --preview-height: 340px;
+  --checker-a:      #383838;
+  --checker-b:      #2b2b2b;
+  --checker-chip:   #555555;
+}
+
+/* ==========================================================================
+   2. BASE
+   ========================================================================== */
+*{box-sizing:border-box}
+html,body{height:100%}
+[hidden]{display:none !important}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:var(--font-size);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:22px 18px 60px}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:.3px}
+h1 span{color:var(--success)}
+.sub{color:var(--muted);margin:0 0 20px;font-size:13px}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);gap:var(--gap);align-items:start}
+@media (max-width:900px){ .layout{grid-template-columns:1fr} }
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:var(--pad);
+}
+
+.lbl{font-size:var(--font-size-sm);font-weight:700;letter-spacing:.6px;color:var(--text);text-transform:uppercase}
+.muted{color:var(--muted)}
+.small{font-size:var(--font-size-sm)}
+.center{text-align:center}
+.row{display:flex;gap:8px;align-items:center}
+.row.wraprow{flex-wrap:wrap}
+
+input[type=text], textarea, select{
+  background:var(--panel-3);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:8px 10px;
+  font-size:var(--font-size);
+  font-family:inherit;
+  outline:none;
+  width:100%;
+}
+input[type=text]:focus, textarea:focus, select:focus{border-color:var(--primary)}
+textarea{resize:vertical;font-family:var(--font-mono);font-size:12.5px}
+
+button{
+  font-family:inherit;
+  font-size:13px;
+  border-radius:var(--radius-sm);
+  border:1px solid transparent;
+  padding:8px 14px;
+  cursor:pointer;
+  background:var(--secondary);
+  color:#fff;
+  transition:filter .12s ease, opacity .12s ease;
+  white-space:nowrap;
+}
+button:hover:not(:disabled){filter:brightness(1.18)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--primary);color:var(--primary-text)}
+button.success{background:var(--success);color:var(--success-text)}
+button.danger{background:var(--danger)}
+button.ghost{background:transparent;border:1px solid var(--border)}
+button.link{background:none;border:none;color:var(--info);padding:4px 6px;text-decoration:underline}
+button.link:hover{color:#6cc4f5}
+
+input[type=color]{
+  -webkit-appearance:none;appearance:none;
+  width:40px;height:36px;padding:0;border:1px solid var(--border);
+  border-radius:var(--radius-sm);background:none;cursor:pointer;flex:0 0 auto;
+}
+input[type=color]::-webkit-color-swatch-wrapper{padding:3px}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:var(--radius-xs)}
+input[type=color]::-moz-color-swatch{border:none;border-radius:var(--radius-xs)}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:22px;background:transparent;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:#1a1a1a;border-radius:3px;border:1px solid var(--border)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-6px;
+  border-radius:50%;background:var(--primary);border:2px solid #cfe0f0;
+}
+input[type=range]::-moz-range-track{height:6px;background:#1a1a1a;border-radius:3px;border:1px solid var(--border)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid #cfe0f0}
+
+.colors{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;margin-top:14px}
+@media (max-width:520px){ .colors{grid-template-columns:1fr} .colors .swapwrap{justify-self:center} }
+.col{min-width:0}
+.swapwrap{padding-top:26px}
+
+.check{
+  display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;
+  padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--panel-2);
+  font-size:13px;
+}
+.check input{accent-color:var(--success);width:15px;height:15px;cursor:pointer}
+
+hr.sep{border:none;border-top:1px solid var(--border);margin:18px 0}
+
+/* ==========================================================================
+   3. PALETTE
+   ========================================================================== */
+.palette-panel{
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px;
+  margin-bottom:16px;
+}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.swatch-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--panel-3);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:5px 9px;
+  color:var(--text);
+  font-size:var(--font-size-sm);
+  cursor:pointer;
+  max-width:100%;
+}
+.swatch-btn:hover{filter:brightness(1.25)}
+.swatch-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+
+.chip{
+  --chip-color: transparent;
+  position:relative;
+  width:20px;height:20px;flex:0 0 auto;
+  border-radius:var(--radius-xs);
+  border:1px solid var(--border);
+  overflow:hidden;
+  background-color:#888;
+  background-image:
+    linear-gradient(45deg,var(--checker-chip) 25%,transparent 25%),
+    linear-gradient(-45deg,var(--checker-chip) 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,var(--checker-chip) 75%),
+    linear-gradient(-45deg,transparent 75%,var(--checker-chip) 75%);
+  background-size:8px 8px;
+  background-position:0 0,0 4px,4px -4px,-4px 0;
+}
+.chip::after{content:"";position:absolute;inset:0;background:var(--chip-color)}
+.chip.small{width:16px;height:16px}
+
+select.preset{margin-bottom:8px;font-size:12.5px}
+select.preset[hidden]{display:none !important}
+
+/* ==========================================================================
+   4. PREVIEW
+   ========================================================================== */
+.preview-card{position:sticky;top:18px}
+.preview-box{
+  position:relative;
+  height:var(--preview-height);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  background-color:var(--panel);
+  background-image:
+    linear-gradient(45deg,var(--checker-a) 25%,transparent 25%),
+    linear-gradient(-45deg,var(--checker-a) 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,var(--checker-a) 75%),
+    linear-gradient(-45deg,transparent 75%,var(--checker-a) 75%);
+  background-size:20px 20px;
+  background-position:0 0,0 10px,10px -10px,-10px 0;
+}
+.preview-box canvas{max-width:100%;max-height:100%;display:block}
+.preview-actions{display:flex;gap:8px;margin-top:12px}
+.preview-actions select{flex:1 1 auto;min-width:0}
+.preview-actions button{flex:0 0 auto}
+
+.status{font-size:var(--font-size-sm);color:var(--warning);min-height:16px;margin-top:10px;text-align:center}
+.hint{font-size:var(--font-size-xs);color:var(--muted);margin-top:6px;line-height:1.45}
+
+/* ==========================================================================
+   5. MODAL
+   ========================================================================== */
+.modal{
+  position:fixed;inset:0;background:var(--overlay);
+  display:none;align-items:center;justify-content:center;z-index:100;padding:20px;
+}
+.modal.open{display:flex}
+.modal-content{
+  width:min(760px,100%);
+  max-height:92vh;overflow-y:auto;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:22px;
+  box-shadow:var(--shadow-modal);
+}
+.modal-content h2{margin:0 0 18px;font-size:18px}
+.modal-content label.field{display:block;margin:14px 0 6px;font-size:var(--font-size-sm);font-weight:700;letter-spacing:.5px;color:#ddd}
+.progress-outer{height:14px;background:#1a1a1a;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:16px}
+.progress-inner{height:100%;width:0%;background:linear-gradient(90deg,var(--success),#00e0a8);transition:width .15s linear}
+.bulk-status{font-size:12.5px;color:var(--info);text-align:center;margin-top:10px;min-height:18px}
+
+/* ==========================================================================
+   6. LIST BOXES (bulk editor)
+   ========================================================================== */
+.listwrap{margin-top:6px}
+.listhead{
+  font-size:var(--font-size-xs);font-weight:700;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--muted);margin:10px 0 6px;
+}
+.listbox{
+  background:var(--panel-3);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:6px;
+  max-height:170px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:4px;
+}
+.listbox:empty::before{
+  content:"(empty — click “+ Add”)";
+  color:var(--muted);font-size:var(--font-size-sm);padding:4px;
+}
+.listrow{display:flex;align-items:center;gap:6px}
+.listinput{
+  flex:1 1 auto;min-width:0;
+  background:var(--panel-input);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xs);
+  color:var(--text);
+  padding:5px 8px;
+  font-size:13px;
+  font-family:inherit;
+  outline:none;
+  width:auto;
+}
+.listinput:focus{border-color:var(--primary)}
+.listinput.invalid{border-color:var(--danger)}
+.rowbtns{display:flex;gap:3px;flex:0 0 auto}
+.rowbtns button{
+  padding:2px 7px;font-size:12px;line-height:1.4;
+  border-radius:var(--radius-xs);
+  background:var(--secondary);
+  border:1px solid var(--border);
+}
+.rowbtns button.del{background:var(--danger);border-color:transparent}
+.listactions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.listactions button{padding:5px 10px;font-size:var(--font-size-sm)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>QR Code <span>Generator</span></h1>
+  <p class="sub">Generate custom QR codes with colors, opacity, rounded corners and an embedded logo.</p>
+
+  <div class="layout">
+    <!-- ================= CONTROLS ================= -->
+    <section class="card">
+
+      <div class="lbl" style="margin-bottom:6px">URL:</div>
+      <div class="row">
+        <input id="url" type="text" placeholder="https://example.com" autocomplete="off">
+        <button id="pasteBtn" class="primary">Paste</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button id="openLinkBtn" class="link">Open Link</button>
+        <button id="testBtn" class="link">Test Image</button>
+      </div>
+
+      <div class="colors">
+        <!-- FOREGROUND -->
+        <div class="col">
+          <div class="lbl center" style="margin-bottom:8px">Foreground</div>
+          <select id="fgPreset" class="preset" hidden></select>
+          <div class="row" style="justify-content:center">
+            <input type="color" id="fgColor" value="#000000">
+            <input type="text" id="fgHex" value="#000000" style="width:96px;text-align:center">
+          </div>
+          <input type="range" id="fgAlpha" min="0" max="100" value="100" style="margin-top:8px">
+          <div id="fgAlphaLbl" class="small center muted">Opacity: 100%</div>
+        </div>
+
+        <div class="swapwrap">
+          <button id="swapBtn" class="danger">Swap ⇄</button>
+        </div>
+
+        <!-- BACKGROUND -->
+        <div class="col">
+          <div class="lbl center" style="margin-bottom:8px">Background</div>
+          <select id="bgPreset" class="preset" hidden></select>
+          <div class="row" style="justify-content:center">
+            <input type="color" id="bgColor" value="#FFFFFF">
+            <input type="text" id="bgHex" value="#FFFFFF" style="width:96px;text-align:center">
+          </div>
+          <input type="range" id="bgAlpha" min="0" max="100" value="100" style="margin-top:8px">
+          <div id="bgAlphaLbl" class="small center muted">Opacity: 100%</div>
+        </div>
+      </div>
+
+      <hr class="sep">
+
+      <div class="row wraprow">
+        <label class="check"><input type="checkbox" id="roundChk" checked> Round Corners?</label>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="lbl" style="margin-bottom:6px">Target Size</div>
+        <input type="range" id="sizeSlider" min="10" max="400" value="120">
+        <div id="sizeLbl" class="small center muted">TARGET SIZE: 1200px</div>
+      </div>
+
+      <hr class="sep">
+
+      <div class="lbl" style="margin-bottom:8px">Embed Logo</div>
+      <div class="row wraprow">
+        <button id="imgBtn" class="primary">Set Image Insert</button>
+        <button id="imgClear" class="danger" style="display:none">X</button>
+        <label class="check" id="monoWrap" style="display:none">
+          <input type="checkbox" id="monoChk"> Monochrome?
+        </label>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+      </div>
+
+      <hr class="sep">
+
+      <!-- ---------- COLOR PALETTE ---------- -->
+      <div class="palette-panel" id="palettePanel">
+        <div class="row" style="justify-content:space-between">
+          <span class="lbl">Color Palette</span>
+          <div class="row">
+            <button type="button" id="paletteUploadBtn" class="ghost" style="padding:5px 10px;font-size:12px">Upload…</button>
+            <button type="button" id="paletteClearBtn" class="danger" style="padding:5px 10px;font-size:12px">Clear</button>
+          </div>
+        </div>
+        <div id="paletteSwatches" class="swatches">
+          <span class="muted small">No palette loaded.</span>
+        </div>
+        <div id="paletteStatus" class="hint"></div>
+        <div class="hint">
+          Load a palette with <code>?palette=FFFFFF-white.000000-black</code> or
+          <code>?palette=https://example.com/palette.xlsx</code>.
+          Swatch: click = background, shift-click = foreground.
+        </div>
+        <input type="file" id="paletteFile" accept=".csv,.xlsx,.xls,.txt" hidden>
+      </div>
+
+      <div class="row" style="margin-bottom:12px">
+        <button id="bulkOpenBtn" class="ghost">Bulk Generate…</button>
+      </div>
+
+    </section>
+    
+    <!-- ================= PREVIEW ================= -->
+    <section class="card preview-card">
+      <div class="lbl" style="margin-bottom:8px">Preview</div>
+      <div class="preview-box" id="previewBox">
+        <span class="muted small">Enter data to generate…</span>
+      </div>
+      <div class="preview-actions">
+        <select id="sizeSelect" disabled></select>
+        <button id="saveBtn" class="primary" disabled>Save</button>
+        <button id="copyBtn" class="primary" disabled>Copy</button>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+  </div>
+</div>
+
+<!-- ================= BULK MODAL ================= -->
+<div class="modal" id="bulkModal">
+  <div class="modal-content">
+    <h2>Bulk QR Code Generator</h2>
+
+    <!-- URLs -->
+    <div class="lbl" style="margin-bottom:6px">URLs</div>
+    <div class="listwrap">
+      <div class="listbox" id="bulkUrlList"></div>
+      <div class="listactions">
+        <button type="button" id="bulkUrlAdd" class="ghost">+ Add</button>
+        <button type="button" id="bulkUrlPaste" class="ghost">Paste list…</button>
+        <button type="button" id="bulkUrlClear" class="ghost">Clear</button>
+      </div>
+    </div>
+
+    <!-- Colors -->
+    <div class="row" style="margin-top:18px;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span class="lbl">Colors</span>
+      <label class="check">
+        <input type="checkbox" id="bulkSplit"> Use different foreground &amp; background lists
+      </label>
+    </div>
+
+    <div class="listwrap">
+      <div class="listhead" id="bulkFgHead">Colors</div>
+      <div class="listbox" id="bulkFgList"></div>
+      <div class="listactions">
+        <button type="button" id="bulkFgAdd" class="ghost">+ Add</button>
+        <button type="button" id="bulkFgPalette" class="ghost">Fill from Palette</button>
+        <button type="button" id="bulkFgClear" class="ghost">Clear</button>
+      </div>
+    </div>
+
+    <div class="listwrap" id="bulkBgWrap" hidden>
+      <div class="listhead">Background Colors</div>
+      <div class="listbox" id="bulkBgList"></div>
+      <div class="listactions">
+        <button type="button" id="bulkBgAdd" class="ghost">+ Add</button>
+        <button type="button" id="bulkBgPalette" class="ghost">Fill from Palette</button>
+        <button type="button" id="bulkBgClear" class="ghost">Clear</button>
+      </div>
+    </div>
+
+    <div class="hint" id="bulkSummary"></div>
+
+    <div class="row" style="margin-top:16px">
+      <span class="lbl" style="flex:0 0 auto">Size:</span>
+      <input type="range" id="bulkSize" min="10" max="400" value="120">
+      <span id="bulkSizeLbl" class="small" style="flex:0 0 68px;text-align:right">1200px</span>
+    </div>
+
+    <label class="check" style="margin-top:14px">
+      <input type="checkbox" id="bulkRound" checked> Round Corners?
+    </label>
+
+    <div class="progress-outer"><div class="progress-inner" id="bulkBar"></div></div>
+    <div class="bulk-status" id="bulkStatus">Ready</div>
+
+    <div class="row" style="justify-content:center;margin-top:16px">
+      <button id="bulkGo" class="success">Generate QR Codes</button>
+      <button id="bulkClose" class="secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     Libraries
+     ========================================================= */
+  if (!window.qrcode) {
+    document.body.innerHTML =
+      '<div style="padding:40px;font-family:sans-serif;color:#fff">' +
+      '<h2>Could not load the QR library.</h2>' +
+      '<p>Please check your internet connection and reload the page.</p></div>';
+    return;
+  }
+  try {
+    if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs["UTF-8"]) {
+      qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
+    }
+  } catch (e) { /* ignore */ }
+
+  /* =========================================================
+     Small helpers
+     ========================================================= */
+  const $ = (id) => document.getElementById(id);
+
+  function hexToRGB(hex) {
+    hex = String(hex).trim().replace("#", "");
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    if (hex.length === 8) hex = hex.slice(0, 6);
+    return [
+      parseInt(hex.slice(0, 2), 16),
+      parseInt(hex.slice(2, 4), 16),
+      parseInt(hex.slice(4, 6), 16),
+    ];
+  }
+  function isHex6(h) { return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(h).trim()); }
+  function rgbaCss(rgb, a) { return "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + (a / 255).toFixed(4) + ")"; }
+
+  const HEX_RE = /^#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?$/;
+  /** Parse "#RRGGBB", "RRGGBB", "#RRGGBBAA" or "RRGGBBAA" -> {hex, alpha} or null. */
+  function parseHexColor(v) {
+    const m = String(v == null ? "" : v).trim().match(HEX_RE);
+    if (!m) return null;
+    return {
+      hex: "#" + m[1].toUpperCase(),
+      alpha: m[2] ? parseInt(m[2], 16) : 255,
+    };
+  }
+  function formatHexWithAlpha(hex, alpha) {
+    return alpha === 255 ? hex : hex + alpha.toString(16).toUpperCase().padStart(2, "0");
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png");
+    });
+  }
+
+  function tick() { return new Promise((r) => setTimeout(r, 0)); }
+
+  function timestamp() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "_" +
+           p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+  }
+
+  /* ---------------- colour naming ---------------- */
+  const CSS_COLORS = [
+    ["#000000","black"],["#FFFFFF","white"],["#FF0000","red"],["#00FF00","lime"],
+    ["#0000FF","blue"],["#FFFF00","yellow"],["#00FFFF","cyan"],["#FF00FF","magenta"],
+    ["#C0C0C0","silver"],["#808080","gray"],["#800000","maroon"],["#808000","olive"],
+    ["#008000","green"],["#800080","purple"],["#008080","teal"],["#000080","navy"],
+    ["#FFA500","orange"],["#FFC0CB","pink"],["#A52A2A","brown"],["#FFD700","gold"],
+    ["#4B0082","indigo"],["#EE82EE","violet"],["#F5F5DC","beige"],["#F0E68C","khaki"],
+    ["#FF7F50","coral"],["#DC143C","crimson"],["#B22222","firebrick"],["#228B22","forestgreen"],
+    ["#90EE90","lightgreen"],["#87CEEB","skyblue"],["#4169E1","royalblue"],["#191970","midnightblue"],
+    ["#FFB6C1","lightpink"],["#FF69B4","hotpink"],["#DB7093","palevioletred"],["#8B4513","saddlebrown"],
+    ["#D2691E","chocolate"],["#CD853F","peru"],["#DEB887","burlywood"],["#DAA520","goldenrod"],
+    ["#B8860B","darkgoldenrod"],["#556B2F","darkolivegreen"],["#2F4F4F","darkslategray"],
+    ["#708090","slategray"],["#A9A9A9","darkgray"],["#D3D3D3","lightgray"],["#696969","dimgray"],
+    ["#FFF8DC","cornsilk"],["#FFFACD","lemonchiffon"],["#E0FFFF","lightcyan"],["#AFEEEE","paleturquoise"],
+    ["#40E0D0","turquoise"],["#48D1CC","mediumturquoise"],["#00CED1","darkturquoise"],
+    ["#5F9EA0","cadetblue"],["#6495ED","cornflowerblue"],["#7B68EE","mediumslateblue"],
+    ["#6A5ACD","slateblue"],["#9370DB","mediumpurple"],["#8A2BE2","blueviolet"],
+    ["#9932CC","darkorchid"],["#BA55D3","mediumorchid"],["#DA70D6","orchid"],
+    ["#FF1493","deeppink"],["#F08080","lightcoral"],["#FA8072","salmon"],["#E9967A","darksalmon"],
+    ["#FF6347","tomato"],["#FF4500","orangered"],["#BDB76B","darkkhaki"]
+  ];
+
+  function nearestColorName(hex) {
+    const c = hexToRGB(hex);
+    let best = "color", bestD = Infinity;
+    for (let i = 0; i < CSS_COLORS.length; i++) {
+      const p = hexToRGB(CSS_COLORS[i][0]);
+      const dr = p[0] - c[0], dg = p[1] - c[1], db = p[2] - c[2];
+      const d = dr * dr + dg * dg + db * db;
+      if (d < bestD) { bestD = d; best = CSS_COLORS[i][1]; }
+    }
+    return best;
+  }
+
+  /* =========================================================
+     QR rendering engine
+     ========================================================= */
+
+  function drawModules(ctx, qr, count, border, scale, fgColor, bgColor) {
+    const size = (count + border * 2) * scale;
+    if (bgColor) { ctx.fillStyle = bgColor; ctx.fillRect(0, 0, size, size); }
+    ctx.fillStyle = fgColor;
+    for (let r = 0; r < count; r++) {
+      const y = (r + border) * scale;
+      for (let c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          ctx.fillRect((c + border) * scale, y, scale, scale);
+        }
+      }
+    }
+  }
+
+  function applyColors(canvas, fgRGBA, bgRGBA) {
+    const ctx = canvas.getContext("2d");
+    const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] === 0 && d[i + 1] === 0 && d[i + 2] === 0) {
+        d[i] = fgRGBA[0]; d[i + 1] = fgRGBA[1]; d[i + 2] = fgRGBA[2]; d[i + 3] = fgRGBA[3];
+      } else {
+        d[i] = bgRGBA[0]; d[i + 1] = bgRGBA[1]; d[i + 2] = bgRGBA[2]; d[i + 3] = bgRGBA[3];
+      }
+    }
+    ctx.putImageData(id, 0, 0);
+  }
+
+  function makeLogoCanvas(src, size, radius, fgRGB, bgRGB, mono) {
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d");
+
+    const s = Math.min(src.width, src.height);
+    const sx = (src.width - s) / 2;
+    const sy = (src.height - s) / 2;
+    ctx.drawImage(src, sx, sy, s, s, 0, 0, size, size);
+
+    if (mono) {
+      const id = ctx.getImageData(0, 0, size, size);
+      const d = id.data;
+      const lumFg = 0.299 * fgRGB[0] + 0.587 * fgRGB[1] + 0.114 * fgRGB[2];
+      const lumBg = 0.299 * bgRGB[0] + 0.587 * bgRGB[1] + 0.114 * bgRGB[2];
+      const black = lumFg > lumBg ? bgRGB : fgRGB;
+      const white = lumFg > lumBg ? fgRGB : bgRGB;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] === 0) continue;
+        const t = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+        d[i]     = black[0] + (white[0] - black[0]) * t;
+        d[i + 1] = black[1] + (white[1] - black[1]) * t;
+        d[i + 2] = black[2] + (white[2] - black[2]) * t;
+      }
+      ctx.putImageData(id, 0, 0);
+    }
+
+    if (radius > 0) {
+      ctx.globalCompositeOperation = "destination-in";
+      ctx.beginPath();
+      roundRectPath(ctx, 0, 0, size, size, radius);
+      ctx.fillStyle = "#000";
+      ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+    }
+    return c;
+  }
+
+  function renderQR(o) {
+    const fgRGB = hexToRGB(o.fgHex);
+    const bgRGB = hexToRGB(o.bgHex);
+    const fgAlpha = (o.fgAlpha === undefined || o.fgAlpha === null) ? 255 : o.fgAlpha;
+    const bgAlpha = (o.bgAlpha === undefined || o.bgAlpha === null) ? 255 : o.bgAlpha;
+    const roundCorners = !!o.roundCorners;
+    const targetSize = Math.max(20, o.targetSize || 1200);
+    const opaque = fgAlpha === 255 && bgAlpha === 255;
+
+    // --- encode -----------------------------------------------------------
+    const qr = qrcode(0, o.logoImg ? "H" : "L");
+    qr.addData(String(o.data));
+    qr.make();
+
+    const count = qr.getModuleCount();
+    const border = roundCorners ? 0 : 1;
+    const total = count + border * 2;
+    const scale = Math.max(1, Math.ceil(targetSize / total));
+    const size = total * scale;
+
+    // --- tiny "icon" version (1px per module) -----------------------------
+    const small = document.createElement("canvas");
+    small.width = small.height = total;
+    {
+      const c = small.getContext("2d");
+      if (opaque) {
+        drawModules(c, qr, count, border, 1, o.fgHex, o.bgHex);
+      } else {
+        drawModules(c, qr, count, border, 1, "#000", "#fff");
+        applyColors(small, [...fgRGB, fgAlpha], [...bgRGB, bgAlpha]);
+      }
+    }
+
+    // --- full-size version ------------------------------------------------
+    let out = document.createElement("canvas");
+    out.width = out.height = size;
+    {
+      const c = out.getContext("2d");
+      if (opaque) {
+        drawModules(c, qr, count, border, scale, o.fgHex, o.bgHex);
+      } else {
+        drawModules(c, qr, count, border, scale, "#000", "#fff");
+        applyColors(out, [...fgRGB, fgAlpha], [...bgRGB, bgAlpha]);
+      }
+    }
+
+    // --- rounded corners ---------------------------------------------------
+    if (roundCorners) {
+      const c = out.getContext("2d");
+      c.globalCompositeOperation = "destination-in";
+      c.beginPath();
+      roundRectPath(c, 0, 0, size, size, scale);
+      c.fillStyle = "#000";
+      c.fill();
+      c.globalCompositeOperation = "source-over";
+
+      if (bgAlpha !== 0) {
+        const pad = scale;
+        const fsize = size + pad * 2;
+        const f = document.createElement("canvas");
+        f.width = f.height = fsize;
+        const fc = f.getContext("2d");
+
+        fc.beginPath();
+        roundRectPath(fc, 0, 0, fsize, fsize, scale * 2);
+        fc.fillStyle = rgbaCss(bgRGB, bgAlpha);
+        fc.fill();
+
+        fc.globalCompositeOperation = "destination-out";
+        fc.beginPath();
+        roundRectPath(fc, pad, pad, size, size, scale);
+        fc.fillStyle = "#000";
+        fc.fill();
+        fc.globalCompositeOperation = "source-over";
+
+        fc.drawImage(out, pad, pad);
+        out = f;
+      }
+    }
+
+    // --- embedded logo -----------------------------------------------------
+    if (o.logoImg) {
+      const c = out.getContext("2d");
+      const blocks = Math.floor(Math.sqrt(count * count * 0.15));
+      let n = Math.floor(blocks / 2) * 2 + 1;
+      if (n < 3) n = 3;
+
+      const boxSize = n * scale;
+      const logoSz = Math.max(1, (n - 2) * scale);
+      const bx = Math.round((out.width - boxSize) / 2);
+      const by = Math.round((out.height - boxSize) / 2);
+
+      c.save();
+      c.beginPath();
+      if (roundCorners) roundRectPath(c, bx, by, boxSize, boxSize, scale);
+      else c.rect(bx, by, boxSize, boxSize);
+      c.fillStyle = rgbaCss(bgRGB, bgAlpha);
+      c.fill();
+      c.restore();
+
+      const logoCanvas = makeLogoCanvas(
+        o.logoImg, logoSz, roundCorners ? scale : 0, fgRGB, bgRGB, !!o.mono
+      );
+      c.drawImage(
+        logoCanvas,
+        Math.round((out.width - logoSz) / 2),
+        Math.round((out.height - logoSz) / 2)
+      );
+    }
+
+    return { canvas: out, small: small };
+  }
+
+  /* =========================================================
+     Application state + DOM references
+     ========================================================= */
+  const state = {
+    logoImg: null,
+    lastResult: null,
+    lastKey: "",
+    palette: [],          // [{hex:'#RRGGBB', alpha:0-255, name:'...'}]
+  };
+
+  const urlInput   = $("url");
+  const fgColor    = $("fgColor");
+  const fgHex      = $("fgHex");
+  const fgPreset   = $("fgPreset");
+  const bgColor    = $("bgColor");
+  const bgHex      = $("bgHex");
+  const bgPreset   = $("bgPreset");
+  const fgAlpha    = $("fgAlpha");
+  const bgAlpha    = $("bgAlpha");
+  const fgAlphaLbl = $("fgAlphaLbl");
+  const bgAlphaLbl = $("bgAlphaLbl");
+  const roundChk   = $("roundChk");
+  const sizeSlider = $("sizeSlider");
+  const sizeLbl    = $("sizeLbl");
+  const monoChk    = $("monoChk");
+  const monoWrap   = $("monoWrap");
+  const imgBtn     = $("imgBtn");
+  const imgClear   = $("imgClear");
+  const fileInput  = $("fileInput");
+  const previewBox = $("previewBox");
+  const sizeSelect = $("sizeSelect");
+  const saveBtn    = $("saveBtn");
+  const copyBtn    = $("copyBtn");
+  const statusEl   = $("status");
+
+  function alphaFromSlider(v) { return Math.round((Number(v) / 100) * 255); }
+  function alphaToSlider(a) { return Math.round((Number(a) / 255) * 100); }
+
+  function updateAlphaLabels() {
+    fgAlphaLbl.textContent = "Opacity: " + fgAlpha.value + "%";
+    bgAlphaLbl.textContent = "Opacity: " + bgAlpha.value + "%";
+    syncPresetSelect(fgPreset, "fg");
+    syncPresetSelect(bgPreset, "bg");
+  }
+
+  function updateSizeLabel() {
+    sizeLbl.textContent = "TARGET SIZE: " + (Number(sizeSlider.value) * 10) + "px";
+  }
+
+  let renderTimer = null;
+  function scheduleRender() {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(render, 110);
+  }
+
+  function setStatus(msg) { statusEl.textContent = msg || ""; }
+
+  function setColorInputs(hexEl, colorEl, hex) {
+    hexEl.value = String(hex).toUpperCase();
+    colorEl.value = String(hex).toLowerCase();
+  }
+
+  /* =========================================================
+     Palette — storage, UI, parsing
+     ========================================================= */
+  const paletteSwatches = $("paletteSwatches");
+  const paletteStatusEl = $("paletteStatus");
+
+  function setPaletteStatus(msg, isError) {
+    paletteStatusEl.textContent = msg || "";
+    paletteStatusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
+  }
+
+  function renderSwatches() {
+    paletteSwatches.innerHTML = "";
+    if (!state.palette.length) {
+      paletteSwatches.innerHTML = '<span class="muted small">No palette loaded.</span>';
+      return;
+    }
+    state.palette.forEach((c, i) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "swatch-btn";
+      btn.title = c.name + " — " + c.hex +
+        (c.alpha < 255 ? " @ " + Math.round((c.alpha / 255) * 100) + "%" : "") +
+        "\nClick: set background · Shift-click: set foreground";
+
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.style.setProperty("--chip-color", rgbaCss(hexToRGB(c.hex), c.alpha));
+
+      const nm = document.createElement("span");
+      nm.className = "swatch-name";
+      nm.textContent = c.name;
+
+      btn.appendChild(chip);
+      btn.appendChild(nm);
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        applyPaletteColor(i, e.shiftKey ? "fg" : "bg");
+      });
+      paletteSwatches.appendChild(btn);
+    });
+  }
+
+  function rebuildPresetSelect(sel, which) {
+    sel.innerHTML = "";
+    const custom = document.createElement("option");
+    custom.value = "custom";
+    custom.textContent = "Custom…";
+    sel.appendChild(custom);
+
+    state.palette.forEach((c, i) => {
+      const o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = c.name + "  (" + c.hex +
+        (c.alpha < 255 ? " · " + Math.round((c.alpha / 255) * 100) + "%" : "") + ")";
+      sel.appendChild(o);
+    });
+
+    sel.hidden = state.palette.length === 0;
+    syncPresetSelect(sel, which);
+  }
+
+  function syncPresetSelect(sel, which) {
+    if (!sel) return;
+    const hexEl = which === "fg" ? fgHex : bgHex;
+    const alphaEl = which === "fg" ? fgAlpha : bgAlpha;
+    const p = parseHexColor(hexEl.value);
+    const a = alphaFromSlider(alphaEl.value);
+
+    let val = "custom";
+    if (p) {
+      for (let i = 0; i < state.palette.length; i++) {
+        const c = state.palette[i];
+        if (c.hex.toUpperCase() === p.hex.toUpperCase() && c.alpha === a) {
+          val = String(i);
+          break;
+        }
+      }
+    }
+    sel.value = val;
+  }
+
+  function applyPaletteColor(index, which) {
+    const c = state.palette[index];
+    if (!c) return;
+    if (which === "fg") {
+      setColorInputs(fgHex, fgColor, c.hex);
+      fgAlpha.value = alphaToSlider(c.alpha);
+    } else {
+      setColorInputs(bgHex, bgColor, c.hex);
+      bgAlpha.value = alphaToSlider(c.alpha);
+    }
+    updateAlphaLabels();
+    state.lastKey = "";
+    scheduleRender();
+  }
+
+  /** When a palette arrives: foreground transparent, background = first colour. */
+  function applyPaletteDefaults() {
+    const first = state.palette[0];
+    if (!first) return;
+
+    // Use the actual transparent palette entry so the preset <select>
+    // reflects the selection instead of showing "Custom…".
+    const transparent = state.palette.find((c) => c.alpha === 0) || makeTransparentEntry();
+
+    setColorInputs(fgHex, fgColor, transparent.hex);
+    fgAlpha.value = alphaToSlider(transparent.alpha);   // -> 0
+    setColorInputs(bgHex, bgColor, first.hex);
+    bgAlpha.value = alphaToSlider(first.alpha);
+
+    updateAlphaLabels();
+    state.lastKey = "";
+    scheduleRender();
+  }
+
+  function setPalette(colors, source) {
+    state.palette = ensureTransparent(colors);   // <-- was: colors.slice()
+    state.lastKey = "";
+    renderSwatches();
+    rebuildPresetSelect(fgPreset, "fg");
+    rebuildPresetSelect(bgPreset, "bg");
+    setPaletteStatus(state.palette.length + " color(s) loaded" + (source ? " " + source : "") + ".");
+    if (state.palette.length) applyPaletteDefaults();
+  }
+  function clearPalette() {
+    state.palette = [];
+    state.lastKey = "";
+    renderSwatches();
+    rebuildPresetSelect(fgPreset, "fg");
+    rebuildPresetSelect(bgPreset, "bg");
+    setPaletteStatus("Palette cleared.");
+    scheduleRender();
+  }
+
+  /* ---------------- palette parsers ---------------- */
+
+  /** One palette entry from a raw hex string + optional label. */
+  function makeEntry(hexRaw, name) {
+    const p = parseHexColor(hexRaw);
+    if (!p) return null;
+    const clean = name == null ? "" : String(name).trim();
+    return {
+      hex: p.hex,
+      alpha: p.alpha,
+      name: clean || nearestColorName(p.hex),
+    };
+  }
+
+  /** ?palette=FFFFFF-white.000000-black.FF0000 — inline list. */
+  function parsePaletteParam(value) {
+    const items = String(value).split(".").map((s) => s.trim()).filter(Boolean);
+    const out = [];
+    items.forEach((item) => {
+      const dash = item.indexOf("-");
+      let hexPart, namePart;
+      if (dash === -1) { hexPart = item; namePart = ""; }
+      else { hexPart = item.slice(0, dash); namePart = item.slice(dash + 1); }
+      const e = makeEntry(hexPart, namePart);
+      if (e) out.push(e);
+    });
+    return out;
+  }
+
+  /** A palette entry that represents full transparency. */
+  function makeTransparentEntry() {
+    return { hex: "#000000", alpha: 0, name: "Transparent" };
+  }
+
+  /** True if the palette already contains a fully-transparent entry. */
+  function hasTransparent(colors) {
+    return colors.some((c) => c.alpha === 0);
+  }
+
+  /** Append a Transparent entry (alpha 0) if none exists. Returns the new array. */
+  function ensureTransparent(colors) {
+    const out = colors.slice();
+    if (!hasTransparent(out)) out.push(makeTransparentEntry());
+    return out;
+  }
+  /** Simple RFC-4180-ish CSV parser -> array of rows (arrays of strings). */
+  function parseCSV(text) {
+    text = String(text).replace(/^\uFEFF/, "");
+    const rows = [];
+    let row = [], field = "", inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else field += ch;
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ",") { row.push(field); field = ""; }
+        else if (ch === "\n") { row.push(field); field = ""; rows.push(row); row = []; }
+        else if (ch === "\r") { /* skip */ }
+        else field += ch;
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+
+    return rows.filter((r) => r.some((c) => String(c).trim() !== ""));
+  }
+
+  const NAME_RE = /^(name|label|title|color ?name|colour ?name)$/i;
+  const HEXH_RE = /^(hex|hex ?code|hex ?value|color|colour|value)$/i;
+
+  /** Turn a 2-D grid of cells into a palette. */
+  function paletteFromRows(rows) {
+    if (!rows || !rows.length) return [];
+    const grid = rows.map((r) => r.map((c) => String(c == null ? "" : c).trim()));
+
+    // 1) header row with a Name and a HEX column
+    const headerIdx = grid.findIndex(
+      (r) => r.some((c) => NAME_RE.test(c)) && r.some((c) => HEXH_RE.test(c))
+    );
+
+    if (headerIdx !== -1) {
+      const header = grid[headerIdx];
+      const nameCol = header.findIndex((c) => NAME_RE.test(c));
+      const hexCol = header.findIndex((c) => HEXH_RE.test(c));
+      const out = [];
+      for (let i = headerIdx + 1; i < grid.length; i++) {
+        const row = grid[i];
+        if (!row || row.length === 0) continue;
+        const e = makeEntry(row[hexCol], row[nameCol]);
+        if (e) out.push(e);
+      }
+      if (out.length) return out;
+    }
+
+    // 2) no header — pick the column that is entirely hex values
+    const width = grid.reduce((m, r) => Math.max(m, r.length), 0);
+    let bestCol = -1, bestCount = 0;
+    for (let c = 0; c < width; c++) {
+      let total = 0, hexCount = 0;
+      for (let r = 0; r < grid.length; r++) {
+        const v = grid[r][c];
+        if (v === undefined || v === "") continue;
+        total++;
+        if (parseHexColor(v)) hexCount++;
+      }
+      if (total > 0 && hexCount === total && hexCount > bestCount) {
+        bestCol = c; bestCount = hexCount;
+      }
+    }
+    if (bestCol !== -1) {
+      const out = [];
+      grid.forEach((row) => {
+        const e = makeEntry(row[bestCol], "");
+        if (e) out.push(e);
+      });
+      if (out.length) return out;
+    }
+
+    // 3) last resort — every cell that looks like a colour
+    const out = [];
+    grid.forEach((row) => row.forEach((cell) => {
+      const e = makeEntry(cell, "");
+      if (e) out.push(e);
+    }));
+    return out;
+  }
+
+  /** Plain text: hex values separated by newlines / commas / semicolons. */
+  function paletteFromText(text) {
+    const parts = String(text).replace(/^\uFEFF/, "").split(/[\n,;]+/);
+    const out = [];
+    parts.forEach((raw) => {
+      const s = raw.trim();
+      if (!s) return;
+      const m = s.match(/^(#?[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)\s*(.*)$/);
+      if (!m) return;
+      const e = makeEntry(m[1], m[2]);
+      if (e) out.push(e);
+    });
+    return out;
+  }
+
+  /* ---------------- lazy XLSX loader ---------------- */
+  let xlsxPromise = null;
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!xlsxPromise) {
+      xlsxPromise = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+        s.onload = () => (window.XLSX ? resolve(window.XLSX) : reject(new Error("XLSX missing")));
+        s.onerror = () => reject(new Error("Could not load the XLSX library."));
+        document.head.appendChild(s);
+      });
+    }
+    return xlsxPromise;
+  }
+
+  async function paletteFromXlsxBuffer(buf) {
+    const XLSX = await loadXLSX();
+    const wb = XLSX.read(buf, { type: "array" });
+    const sheetName =
+      wb.SheetNames.find((n) => String(n).trim().toLowerCase() === "palette") ||
+      wb.SheetNames[0];
+    if (!sheetName) throw new Error('No "Palette" sheet found.');
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {
+      header: 1, blankrows: false, defval: "",
+    });
+    return paletteFromRows(rows);
+  }
+
+  function looksLikeUrl(v) {
+    return /^(https?:)?\/\//i.test(v) || /\.(csv|xlsx|xls|txt)(\?.*)?$/i.test(v);
+  }
+
+  async function paletteFromFetch(url) {
+    setPaletteStatus("Loading palette…");
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) throw new Error("HTTP " + res.status + " while fetching the palette.");
+    const buf = await res.arrayBuffer();
+    const name = (url.split("?")[0].split("/").pop() || "").toLowerCase();
+
+    let colors = [];
+    if (/\.(xlsx|xls)$/.test(name)) {
+      colors = await paletteFromXlsxBuffer(buf);
+    } else if (/\.csv$/.test(name)) {
+      colors = paletteFromRows(parseCSV(new TextDecoder().decode(buf)));
+    } else if (/\.txt$/.test(name)) {
+      colors = paletteFromText(new TextDecoder().decode(buf));
+    } else {
+      // Sniff: XLSX files start with "PK"
+      const sig = new Uint8Array(buf.slice(0, 4));
+      if (sig[0] === 0x50 && sig[1] === 0x4B) colors = await paletteFromXlsxBuffer(buf);
+      else colors = paletteFromText(new TextDecoder().decode(buf));
+    }
+    if (!colors.length) throw new Error("No colors were found in that file.");
+    return colors;
+  }
+
+  async function loadPaletteFromParam(value) {
+    const val = String(value || "").trim();
+    if (!val) return;
+    if (looksLikeUrl(val)) {
+      const colors = await paletteFromFetch(val);
+      setPalette(colors, "from URL");
+    } else {
+      const colors = parsePaletteParam(val);
+      if (!colors.length) throw new Error("The ?palette parameter contained no valid colors.");
+      setPalette(colors, "from URL parameter");
+    }
+  }
+
+  async function paletteFromFile(file) {
+    const name = (file.name || "").toLowerCase();
+    if (/\.(xlsx|xls)$/.test(name)) {
+      const buf = await file.arrayBuffer();
+      return paletteFromXlsxBuffer(buf);
+    }
+    const text = await file.text();
+    if (/\.csv$/.test(name)) return paletteFromRows(parseCSV(text));
+    return paletteFromText(text);
+  }
+
+  /* =========================================================
+     Bulk list widget (python-listbox style)
+     ========================================================= */
+  function makeList(container, opts) {
+    opts = opts || {};
+    const isColor = !!opts.color;
+
+    function fire() { if (opts.onChange) opts.onChange(); }
+
+    function buildRow(value) {
+      const row = document.createElement("div");
+      row.className = "listrow";
+
+      let chip = null;
+      if (isColor) {
+        chip = document.createElement("span");
+        chip.className = "chip small";
+        row.appendChild(chip);
+      }
+
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.className = "listinput";
+      inp.placeholder = opts.placeholder || "";
+      inp.value = value == null ? "" : value;
+      row.appendChild(inp);
+
+      const btns = document.createElement("div");
+      btns.className = "rowbtns";
+      btns.innerHTML =
+        '<button type="button" data-act="up" title="Move up">↑</button>' +
+        '<button type="button" data-act="down" title="Move down">↓</button>' +
+        '<button type="button" data-act="del" class="del" title="Remove">✕</button>';
+      row.appendChild(btns);
+
+      btns.addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        const act = b.dataset.act;
+        if (act === "up") {
+          const prev = row.previousElementSibling;
+          if (prev) container.insertBefore(row, prev);
+        } else if (act === "down") {
+          const next = row.nextElementSibling;
+          if (next) container.insertBefore(next, row);
+        } else if (act === "del") {
+          row.remove();
+        }
+        fire();
+      });
+
+      if (isColor) {
+        const refresh = () => {
+          const p = parseHexColor(inp.value);
+          chip.style.setProperty(
+            "--chip-color",
+            p ? rgbaCss(hexToRGB(p.hex), p.alpha) : "transparent"
+          );
+          inp.classList.toggle("invalid", inp.value.trim() !== "" && !p);
+        };
+        inp.addEventListener("input", () => { refresh(); fire(); });
+        refresh();
+      } else {
+        inp.addEventListener("input", fire);
+      }
+
+      return row;
+    }
+
+    const api = {
+      add(value, focus) {
+        const row = buildRow(value);
+        container.appendChild(row);
+        if (focus !== false) row.querySelector(".listinput").focus();
+        fire();
+        return row;
+      },
+      values() {
+        return Array.from(container.querySelectorAll(".listinput"))
+          .map((i) => i.value.trim())
+          .filter(Boolean);
+      },
+      setValues(arr) {
+        container.innerHTML = "";
+        (arr || []).forEach((v) => container.appendChild(buildRow(v)));
+        fire();
+      },
+      clear() {
+        container.innerHTML = "";
+        fire();
+      },
+      appendUnique(arr) {
+        const key = (v) => String(v).trim().toUpperCase().replace(/^#/, "");
+        const seen = new Set(api.values().map(key));
+        (arr || []).forEach((v) => {
+          const k = key(v);
+          if (seen.has(k)) return;
+          seen.add(k);
+          container.appendChild(buildRow(v));
+        });
+        fire();
+      },
+    };
+    return api;
+  }
+
+  /* =========================================================
+     Main render
+     ========================================================= */
+  function render() {
+    const url = urlInput.value.trim();
+    const fg = fgHex.value.trim();
+    const bg = bgHex.value.trim();
+
+    if (!url) { setStatus("Enter a URL to generate a QR code."); return; }
+
+    const fgP = parseHexColor(fg);
+    const bgP = parseHexColor(bg);
+    if (!fgP || !bgP) { setStatus("Colors must be valid hex (e.g. #000000)."); return; }
+
+    const a1 = alphaFromSlider(fgAlpha.value);
+    const a2 = alphaFromSlider(bgAlpha.value);
+
+    if (fgP.hex === bgP.hex && a1 === a2) {
+      setStatus("Foreground and background must be different.");
+      return;
+    }
+
+    const target = Number(sizeSlider.value) * 10;
+
+    const key = JSON.stringify([
+      url, fgP.hex, bgP.hex, a1, a2, target, roundChk.checked,
+      state.logoImg ? state.logoImg.src : null, monoChk.checked,
+    ]);
+    if (key === state.lastKey) return;
+    state.lastKey = key;
+
+    setStatus("");
+    try {
+      const res = renderQR({
+        data: url,
+        fgHex: fgP.hex,
+        bgHex: bgP.hex,
+        fgAlpha: a1,
+        bgAlpha: a2,
+        targetSize: target,
+        roundCorners: roundChk.checked,
+        logoImg: state.logoImg,
+        mono: monoChk.checked,
+      });
+      state.lastResult = res;
+      showPreview(res);
+    } catch (err) {
+      console.error(err);
+      setStatus("Generation failed: " + err.message);
+    }
+  }
+
+  function showPreview(res) {
+    previewBox.innerHTML = "";
+    const c = res.canvas;
+    c.style.imageRendering = c.width <= 400 ? "pixelated" : "auto";
+    previewBox.appendChild(c);
+
+    sizeSelect.innerHTML = "";
+    const imgOpt = document.createElement("option");
+    imgOpt.value = "image";
+    imgOpt.textContent = (res.small.width === res.canvas.width)
+      ? res.canvas.width + "x" + res.canvas.height
+      : "Image (" + res.canvas.width + "x" + res.canvas.height + ")";
+    sizeSelect.appendChild(imgOpt);
+
+    if (res.small.width !== res.canvas.width) {
+      const iconOpt = document.createElement("option");
+      iconOpt.value = "icon";
+      iconOpt.textContent = "Icon (" + res.small.width + "x" + res.small.height + ")";
+      sizeSelect.appendChild(iconOpt);
+    }
+    sizeSelect.value = "image";
+    sizeSelect.disabled = false;
+    saveBtn.disabled = false;
+    copyBtn.disabled = false;
+  }
+
+  function currentCanvas() {
+    if (!state.lastResult) return null;
+    if (sizeSelect.value === "icon") return state.lastResult.small;
+    return state.lastResult.canvas;
+  }
+
+  function flashButton(btn, text, ms) {
+    const original = btn.dataset.original || btn.textContent;
+    btn.dataset.original = original;
+    btn.textContent = text;
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.disabled = false;
+    }, ms || 1400);
+  }
+
+  async function saveImage() {
+    const c = currentCanvas();
+    if (!c) return;
+    const blob = await canvasToBlob(c);
+    const url = urlInput.value.trim();
+    const safe = url.replace(/[\\/:*?"<>|\s]+/g, "_").slice(0, 60);
+    const name = "CODE " + c.width + "x" + c.height + " - " + safe + ".png";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    flashButton(saveBtn, "Saved!");
+  }
+
+  async function copyImage() {
+    const c = currentCanvas();
+    if (!c) return;
+    try {
+      const blob = await canvasToBlob(c);
+      if (!navigator.clipboard || !window.ClipboardItem) {
+        throw new Error("Clipboard image writing is not supported in this browser.");
+      }
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      flashButton(copyBtn, "Copied!");
+    } catch (err) {
+      alert("Copy failed: " + err.message);
+    }
+  }
+
+  /* =========================================================
+     Wiring — main controls
+     ========================================================= */
+  imgBtn.addEventListener("click", () => fileInput.click());
+
+  fileInput.addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const objectUrl = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      state.logoImg = img;
+      state.lastKey = "";
+      imgBtn.textContent = "Change Image Insert";
+      imgClear.style.display = "";
+      monoWrap.style.display = "";
+      render();
+    };
+    img.onerror = () => alert("Could not load that image.");
+    img.src = objectUrl;
+    fileInput.value = "";
+  });
+
+  imgClear.addEventListener("click", () => {
+    state.logoImg = null;
+    state.lastKey = "";
+    imgClear.style.display = "none";
+    monoWrap.style.display = "none";
+    monoChk.checked = false;
+    imgBtn.textContent = "Set Image Insert";
+    render();
+  });
+
+  /* ---------------- colour pickers ---------------- */
+  fgColor.addEventListener("input", () => {
+    fgHex.value = fgColor.value.toUpperCase();
+    syncPresetSelect(fgPreset, "fg");
+    scheduleRender();
+  });
+  fgHex.addEventListener("input", () => {
+    const p = parseHexColor(fgHex.value);
+    if (p) fgColor.value = p.hex.toLowerCase();
+    else if (isHex6(fgHex.value)) {
+      let v = fgHex.value.trim();
+      if (v.length === 4) v = "#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
+      fgColor.value = v.toLowerCase();
+    }
+    syncPresetSelect(fgPreset, "fg");
+    scheduleRender();
+  });
+
+  bgColor.addEventListener("input", () => {
+    bgHex.value = bgColor.value.toUpperCase();
+    syncPresetSelect(bgPreset, "bg");
+    scheduleRender();
+  });
+  bgHex.addEventListener("input", () => {
+    const p = parseHexColor(bgHex.value);
+    if (p) bgColor.value = p.hex.toLowerCase();
+    else if (isHex6(bgHex.value)) {
+      let v = bgHex.value.trim();
+      if (v.length === 4) v = "#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
+      bgColor.value = v.toLowerCase();
+    }
+    syncPresetSelect(bgPreset, "bg");
+    scheduleRender();
+  });
+
+  fgPreset.addEventListener("change", () => {
+    if (fgPreset.value === "custom") { fgHex.focus(); fgHex.select(); return; }
+    applyPaletteColor(Number(fgPreset.value), "fg");
+  });
+  bgPreset.addEventListener("change", () => {
+    if (bgPreset.value === "custom") { bgHex.focus(); bgHex.select(); return; }
+    applyPaletteColor(Number(bgPreset.value), "bg");
+  });
+
+  $("swapBtn").addEventListener("click", () => {
+    const f = fgHex.value, b = bgHex.value;
+    fgHex.value = b; bgHex.value = f;
+
+    const fp = parseHexColor(b), bp = parseHexColor(f);
+    if (fp) fgColor.value = fp.hex.toLowerCase();
+    if (bp) bgColor.value = bp.hex.toLowerCase();
+
+    const a = fgAlpha.value;
+    fgAlpha.value = bgAlpha.value;
+    bgAlpha.value = a;
+
+    updateAlphaLabels();
+    state.lastKey = "";
+    scheduleRender();
+  });
+
+  fgAlpha.addEventListener("input", () => { updateAlphaLabels(); scheduleRender(); });
+  bgAlpha.addEventListener("input", () => { updateAlphaLabels(); scheduleRender(); });
+
+  roundChk.addEventListener("change", () => { state.lastKey = ""; scheduleRender(); });
+  monoChk.addEventListener("change", () => { state.lastKey = ""; scheduleRender(); });
+
+  sizeSlider.addEventListener("input", () => { updateSizeLabel(); scheduleRender(); });
+
+  urlInput.addEventListener("input", scheduleRender);
+
+  $("pasteBtn").addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) { urlInput.value = text.trim(); state.lastKey = ""; render(); }
+    } catch (e) {
+      alert("Could not read the clipboard. Please paste manually.");
+    }
+  });
+
+  $("openLinkBtn").addEventListener("click", () => {
+    let u = urlInput.value.trim();
+    if (!u) return;
+    if (!/^https?:\/\//i.test(u)) u = "http://" + u;
+    window.open(u, "_blank", "noopener");
+  });
+
+  $("testBtn").addEventListener("click", async () => {
+    if (!state.lastResult) return;
+    if (!("BarcodeDetector" in window)) {
+      alert("This browser does not support the BarcodeDetector API, so the image cannot be tested here.");
+      return;
+    }
+    try {
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      const codes = await detector.detect(state.lastResult.canvas);
+      const expected = urlInput.value.trim();
+      if (!codes.length) {
+        alert("No QR code could be decoded from the generated image (try disabling rounded corners or the logo).");
+        return;
+      }
+      const found = codes.map((c) => c.rawValue);
+      if (found.includes(expected)) alert("Match!\n\nThe image decodes to:\n" + expected);
+      else alert("No match!\n\nExpected: " + expected + "\nGot: " + found.join(", "));
+    } catch (e) {
+      alert("Test failed: " + e.message);
+    }
+  });
+
+  saveBtn.addEventListener("click", saveImage);
+  copyBtn.addEventListener("click", copyImage);
+
+  /* ---------------- palette controls ---------------- */
+  $("paletteUploadBtn").addEventListener("click", () => $("paletteFile").click());
+
+  $("paletteFile").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    try {
+      setPaletteStatus("Reading " + f.name + "…");
+      const colors = await paletteFromFile(f);
+      if (!colors.length) throw new Error("No colors were found in that file.");
+      setPalette(colors, "from " + f.name);
+    } catch (err) {
+      console.error(err);
+      setPaletteStatus("Could not read palette: " + err.message, true);
+    }
+  });
+
+  $("paletteClearBtn").addEventListener("click", clearPalette);
+
+  /* =========================================================
+     Bulk generation
+     ========================================================= */
+  const bulkModal   = $("bulkModal");
+  const bulkSplit   = $("bulkSplit");
+  const bulkSize    = $("bulkSize");
+  const bulkSizeLbl = $("bulkSizeLbl");
+  const bulkRound   = $("bulkRound");
+  const bulkBar     = $("bulkBar");
+  const bulkStatus  = $("bulkStatus");
+  const bulkGo      = $("bulkGo");
+  const bulkFgHead  = $("bulkFgHead");
+  const bulkBgWrap  = $("bulkBgWrap");
+  const bulkSummary = $("bulkSummary");
+
+  const urlList = makeList($("bulkUrlList"), {
+    placeholder: "https://example.com",
+    onChange: updateBulkSummary,
+  });
+  const fgList = makeList($("bulkFgList"), {
+    color: true,
+    placeholder: "#000000 or #00000080",
+    onChange: updateBulkSummary,
+  });
+  const bgList = makeList($("bulkBgList"), {
+    color: true,
+    placeholder: "#FFFFFF or #FFFFFF80",
+    onChange: updateBulkSummary,
+  });
+
+  function updateBulkSummary() {
+    const u = urlList.values().length;
+    const f = fgList.values().length;
+    const b = bulkSplit.checked ? bgList.values().length : f;
+    const total = u * f * b;
+    bulkSummary.textContent =
+      u + " URL(s) × " + f + " foreground × " + b + " background = " + total + " QR code(s)";
+  }
+
+  /* --- list action buttons --- */
+  $("bulkUrlAdd").addEventListener("click", () => urlList.add(""));
+  $("bulkUrlClear").addEventListener("click", () => urlList.clear());
+  $("bulkUrlPaste").addEventListener("click", async () => {
+    let text = "";
+    try { text = await navigator.clipboard.readText(); } catch (e) { /* fall through */ }
+    if (!text) {
+      text = prompt("Paste your list of URLs (separated by commas or newlines):") || "";
+    }
+    text.split(/[\n,;\s]+/).map((s) => s.trim()).filter(Boolean)
+      .forEach((v) => urlList.add(v, false));
+    updateBulkSummary();
+  });
+
+  $("bulkFgAdd").addEventListener("click", () => fgList.add(""));
+  $("bulkFgClear").addEventListener("click", () => fgList.clear());
+  $("bulkBgAdd").addEventListener("click", () => bgList.add(""));
+  $("bulkBgClear").addEventListener("click", () => bgList.clear());
+
+  function fillFromPalette(list) {
+    if (!state.palette.length) {
+      alert('No palette loaded. Use the "Upload…" button or the ?palette= URL parameter.');
+      return;
+    }
+    list.appendUnique(state.palette.map((c) => formatHexWithAlpha(c.hex, c.alpha)));
+    updateBulkSummary();
+  }
+  $("bulkFgPalette").addEventListener("click", () => fillFromPalette(fgList));
+  $("bulkBgPalette").addEventListener("click", () => fillFromPalette(bgList));
+
+  /* --- split / merge toggle --- */
+  bulkSplit.addEventListener("change", () => {
+    if (bulkSplit.checked) {
+      // Turning ON: seed the background list from the shared foreground list.
+      if (!bgList.values().length) bgList.setValues(fgList.values());
+      bulkBgWrap.hidden = false;
+      bulkFgHead.textContent = "Foreground Colors";
+    } else {
+      // Turning OFF: merge both lists into one, dropping duplicates.
+      const merged = [];
+      const seen = new Set();
+      const push = (v) => {
+        const p = parseHexColor(v);
+        const key = p ? p.hex + ":" + p.alpha : String(v).toUpperCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(v);
+      };
+      fgList.values().forEach(push);
+      bgList.values().forEach(push);
+
+      fgList.setValues(merged);
+      bgList.clear();
+      bulkBgWrap.hidden = true;
+      bulkFgHead.textContent = "Colors";
+    }
+    updateBulkSummary();
+  });
+
+  /* --- modal open/close --- */
+  function openBulkModal() {
+    if (!urlList.values().length) {
+      const u = urlInput.value.trim();
+      if (u) urlList.add(u, false);
+    }
+    if (!fgList.values().length) {
+      const p = parseHexColor(fgHex.value);
+      if (p) fgList.add(formatHexWithAlpha(p.hex, alphaFromSlider(fgAlpha.value)), false);
+    }
+    if (bulkSplit.checked && !bgList.values().length) {
+      const p = parseHexColor(bgHex.value);
+      if (p) bgList.add(formatHexWithAlpha(p.hex, alphaFromSlider(bgAlpha.value)), false);
+    }
+
+    bulkBgWrap.hidden = !bulkSplit.checked;
+    bulkFgHead.textContent = bulkSplit.checked ? "Foreground Colors" : "Colors";
+
+    bulkSize.value = sizeSlider.value;
+    bulkSizeLbl.textContent = (Number(bulkSize.value) * 10) + "px";
+    bulkRound.checked = roundChk.checked;
+    bulkBar.style.width = "0%";
+    bulkStatus.textContent = "Ready";
+    updateBulkSummary();
+    bulkModal.classList.add("open");
+  }
+
+  function closeBulkModal() {
+    bulkModal.classList.remove("open");
+  }
+
+  $("bulkOpenBtn").addEventListener("click", openBulkModal);
+  $("bulkClose").addEventListener("click", closeBulkModal);
+
+  bulkModal.addEventListener("click", (e) => {
+    if (e.target === bulkModal) closeBulkModal();
+  });
+
+  bulkSize.addEventListener("input", () => {
+    bulkSizeLbl.textContent = (Number(bulkSize.value) * 10) + "px";
+  });
+
+  function updateBulkProgress(done, total, failed) {
+    const pct = total ? (done / total) * 100 : 0;
+    bulkBar.style.width = pct.toFixed(1) + "%";
+    bulkStatus.textContent =
+      "Generating " + done + "/" + total + " (" + pct.toFixed(1) + "%) — Failed: " + failed;
+  }
+
+  /* --- the actual bulk run --- */
+  async function runBulk() {
+    const urls = urlList.values();
+    const fgRaw = fgList.values();
+    const bgRaw = bulkSplit.checked ? bgList.values() : fgRaw.slice();
+
+    const fgs = [];
+    const bgs = [];
+    fgRaw.forEach((v) => { const p = parseHexColor(v); if (p) fgs.push(p); });
+    bgRaw.forEach((v) => { const p = parseHexColor(v); if (p) bgs.push(p); });
+
+    if (!urls.length) { alert("Please add at least one URL."); return; }
+    if (!fgs.length) { alert("Please add at least one valid foreground color (e.g. #000000 or #00000080)."); return; }
+    if (!bgs.length) { alert("Please add at least one valid background color (e.g. #FFFFFF or #FFFFFF80)."); return; }
+
+    const total = urls.length * fgs.length * bgs.length;
+    if (total === 0) { alert("No valid combinations found."); return; }
+
+    const ok = confirm(
+      "This will generate " + total + " QR codes.\n\n" +
+      "URLs: " + urls.length + "\n" +
+      "Foreground colors: " + fgs.length + "\n" +
+      "Background colors: " + bgs.length + "\n\n" +
+      "Do you want to continue?"
+    );
+    if (!ok) return;
+
+    if (typeof JSZip === "undefined") {
+      alert("The ZIP library could not be loaded. Please check your internet connection.");
+      return;
+    }
+
+    bulkGo.disabled = true;
+    bulkBar.style.width = "0%";
+    updateBulkProgress(0, total, 0);
+
+    const zip = new JSZip();
+    const size = Number(bulkSize.value) * 10;
+    const round = bulkRound.checked;
+
+    let done = 0;
+    let failed = 0;
+    let added = 0;
+
+    for (let ui = 0; ui < urls.length; ui++) {
+      const idx = String(ui + 1).padStart(3, "0");
+      for (const fg of fgs) {
+        for (const bg of bgs) {
+          if (fg.hex === bg.hex && fg.alpha === bg.alpha) {
+            failed++;
+          } else {
+            try {
+              const res = renderQR({
+                data: urls[ui],
+                fgHex: fg.hex,
+                bgHex: bg.hex,
+                fgAlpha: fg.alpha,
+                bgAlpha: bg.alpha,
+                targetSize: size,
+                roundCorners: round,
+              });
+              const blob = await canvasToBlob(res.canvas);
+              const fgName = formatHexWithAlpha(fg.hex, fg.alpha).replace("#", "");
+              const bgName = formatHexWithAlpha(bg.hex, bg.alpha).replace("#", "");
+              zip.file(idx + "_FG" + fgName + "_BG" + bgName + ".PNG", blob);
+              added++;
+            } catch (err) {
+              console.error(err);
+              failed++;
+            }
+          }
+          done++;
+          updateBulkProgress(done, total, failed);
+          await tick();
+        }
+      }
+    }
+
+    if (added > 0) {
+      bulkStatus.textContent = "Building ZIP…";
+      try {
+        const zipBlob = await zip.generateAsync(
+          { type: "blob", compression: "DEFLATE" },
+          (meta) => {
+            bulkStatus.textContent = "Building ZIP… " + meta.percent.toFixed(0) + "%";
+          }
+        );
+        const name = "QR_Codes_Bulk_" + timestamp() + ".zip";
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(zipBlob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+
+        bulkStatus.textContent =
+          "Success! Generated " + added + "/" + total +
+          " QR codes (failed: " + failed + "). Saved as " + name;
+        alert(
+          "Bulk generation complete!\n\n" +
+          "Generated: " + added + "\n" +
+          "Failed: " + failed + "\n" +
+          "File: " + name
+        );
+      } catch (err) {
+        bulkStatus.textContent = "Error creating ZIP file: " + err.message;
+        alert("Failed to create ZIP file: " + err.message);
+      }
+    } else {
+      bulkStatus.textContent = "No QR codes were generated (failed: " + failed + ").";
+    }
+
+    bulkGo.disabled = false;
+  }
+
+  bulkGo.addEventListener("click", runBulk);
+
+  /* =========================================================
+     Boot
+     ========================================================= */
+  (async function boot() {
+    updateAlphaLabels();
+    updateSizeLabel();
+    renderSwatches();
+    rebuildPresetSelect(fgPreset, "fg");
+    rebuildPresetSelect(bgPreset, "bg");
+    updateBulkSummary();
+
+    const params = new URLSearchParams(location.search);
+    const paletteParam = params.get("palette");
+    if (paletteParam) {
+      try {
+        await loadPaletteFromParam(paletteParam);
+      } catch (err) {
+        console.error(err);
+        setPaletteStatus("Could not load palette: " + err.message, true);
+      }
+    }
+
+    urlInput.focus();
+    scheduleRender();
+  })();
+})();
+</script>
+</body>
+</html>
