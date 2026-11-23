@@ -491,7 +491,7 @@ function extractRoomStats(table, warn) {
   if (todayCol < 0) throw new Error('The "Room Statistics" table has no "Today" column.');
 
   const mtdCol = findMTDCol(headers);
-  if (mtdCol < 0) warn('The "Room Statistics" table has no MTD column; "Rooms Sold this Month" will be blank.');
+  if (mtdCol < 0) warn('The "Room Statistics" table has no MTD column; "MTD Rooms Sold" will be blank.');
 
   return {
     label: String(row[descCol] || '').trim(),
@@ -710,10 +710,10 @@ async function refresh() {
     push(`Day’s Total Deposit: ${v}`, `Day’s Total Deposit: ${v}`);
   }
 
-  // 4. Rooms Sold this Month
+  // 4. MTD Rooms Sold
   {
     const v = mtdRooms == null ? '' : fmtNum(mtdRooms);
-    push(`Rooms Sold this Month: ${v}`, `Rooms Sold this Month: ${v}`);
+    push(`MTD Rooms Sold: ${v}`, `MTD Rooms Sold: ${v}`);
   }
 
   // 5. Daily Revenue
