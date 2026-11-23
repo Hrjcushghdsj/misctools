@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Home2 Recap Generator</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#fff; --ink:#1c2430; --muted:#5b6675;
+    --accent:#1f6feb; --border:#dfe3e8; --err:#b3261e; --warn:#8a5a00;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:840px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 16px}
+  h2{font-size:16px;margin:0 0 12px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .field{margin-bottom:14px}
+  label{display:block;font-weight:600;margin-bottom:6px;font-size:14px}
+  input[type=date],input[type=number],input[type=file]{
+    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;background:#fff;color:inherit
+  }
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  button{cursor:pointer;font:inherit;font-weight:600;padding:9px 16px;border-radius:8px;
+    border:1px solid var(--accent);background:var(--accent);color:#fff;transition:filter .15s}
+  button:hover:not(:disabled){filter:brightness(1.07)}
+  button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  button.secondary{background:#fff;color:var(--accent)}
+  button.secondary:disabled{background:#f2f3f5}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  pre#output{white-space:pre-wrap;background:#e0e0e0;color:#000000;padding:16px;border-radius:8px;
+    font:14px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:60px;margin:0 0 14px;overflow-x:auto}
+  .na{color:#ff6b6b;font-weight:700}
+  .msg{font-size:14px;padding:8px 11px;border-radius:8px;margin-bottom:8px}
+  .msg.err{background:#fdecea;color:var(--err)}
+  .msg.warn{background:#fff4e5;color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Home2 Recap Generator</h1>
+
+  <div class="card">
+    <div class="field">
+      <label for="reportDate">Date of Report</label>
+      <input type="date" id="reportDate" />
+    </div>
+
+    <div class="field">
+      <label for="orrFile">Operational Revenue Reporting (.csv)</label>
+      <input type="file" id="orrFile" accept=".csv,text/csv" />
+      <div class="hint" id="orrHint">Must include at least 30 days of history, inclusive of the report date (e.g. 10/22–11/20).</div>
+    </div>
+
+    <div class="field">
+      <label for="hsFile">Hotel Statistics (.xlsx)</label>
+      <input type="file" id="hsFile" accept=".xlsx,.xls" />
+      <div class="hint">Must contain “Room Statistics” and “Revenue Performance” tables.</div>
+    </div>
+
+    <div class="field">
+      <label for="roomsTonight">Current Rooms for Tonight (see PEP > Availability > Sold)</label>
+      <input type="number" id="roomsTonight" min="0" step="1" placeholder="e.g. 42" />
+    </div>
+  </div>
+
+  <div id="messages"></div>
+
+  <div class="card">
+    <pre id="output">—</pre>
+    <div class="row">
+      <button id="copyFull" disabled>Copy Full</button>
+      <button id="copySummary" class="secondary" disabled>Copy Summary</button>
+      <button id="copySubject" class="secondary">Copy Subject</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ------------------------------------------------------------------ */
+/* Small helpers                                                       */
+/* ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+
+const pad2 = n => String(n).padStart(2, '0');
+const toISO = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const isoToDate = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (iso, n) => { const d = isoToDate(iso); d.setDate(d.getDate() + n); return toISO(d); };
+const monthDay = iso => { const d = isoToDate(iso); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const firstOfMonth = iso => { const d = isoToDate(iso); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-01`; };
+const norm = s => String(s == null ? '' : s).trim().toLowerCase();
+const isBlank = v => v == null || (typeof v === 'string' && v.trim() === '');
+
+/* Default report date = yesterday */
+(function () {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  $('reportDate').value = toISO(d);
+})();
+
+/* ------------------------------------------------------------------ */
+/* Formatting                                                          */
+/* ------------------------------------------------------------------ */
+function fmtNum(n) {
+  if (n == null || !isFinite(n)) return '—';
+  const r = Math.round(n * 100) / 100;
+  if (Number.isInteger(r)) return r.toLocaleString('en-US');
+  return r.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtMoney(n) {
+  if (n == null || !isFinite(n)) return '—';
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function toNumber(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  const raw = String(v).trim();
+  if (!raw) return null;
+  const negParen = /^\(.*\)$/.test(raw);
+  const s = raw.replace(/[^0-9.\-]/g, '');
+  if (s === '' || s === '-' || s === '.') return null;
+  const n = parseFloat(s);
+  if (!isFinite(n)) return null;
+  return negParen ? -n : n;
+}
+
+function updateOrrHint() {
+  const reportISO = $('reportDate').value;
+  const hint = $('orrHint');
+  if (!reportISO) {
+    hint.textContent = 'Must include dates between — and — (inclusive)';
+    return;
+  }
+  const start = addDays(reportISO, -29);   // 30 days inclusive
+  hint.textContent = `Must include dates between ${monthDay(start)} and ${monthDay(reportISO)} (inclusive)`;
+}
+/* ------------------------------------------------------------------ */
+/* Universal date parser                                              */
+/* ------------------------------------------------------------------ */
+const MONTH_NAMES = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+  may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9, oct: 10, october: 10,
+  nov: 11, november: 11, dec: 12, december: 12
+};
+
+function buildISO(y, m, d) {
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+  if (y < 1900 || y > 2200) return null;
+  if (m < 1 || m > 12) return null;
+  if (d < 1 || d > 31) return null;
+  const dt = new Date(y, m - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+  return `${y}-${pad2(m)}-${pad2(d)}`;
+}
+
+function fromSerialOrCompact(n) {
+  if (!isFinite(n)) return null;
+  if (n > 19000000 && n < 22000000) {
+    const s = String(Math.round(n));
+    return buildISO(+s.slice(0, 4), +s.slice(4, 6), +s.slice(6, 8));
+  }
+  if (n > 1 && n < 100000) {
+    const d = XLSX.SSF.parse_date_code(n);
+    if (d && d.y && d.m && d.d) return buildISO(d.y, d.m, d.d);
+  }
+  return null;
+}
+
+function parseDateToISO(v) {
+  if (v == null || v === '') return null;
+
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) return null;
+    return buildISO(v.getFullYear(), v.getMonth() + 1, v.getDate());
+  }
+
+  if (typeof v === 'number') {
+    const viaSerial = fromSerialOrCompact(v);
+    if (viaSerial) return viaSerial;
+    const s = String(Math.round(v));
+    if (/^\d{8}$/.test(s)) {
+      const yFirst = buildISO(+s.slice(0, 4), +s.slice(4, 6), +s.slice(6, 8));
+      if (yFirst) return yFirst;
+      return buildISO(+s.slice(4, 8), +s.slice(0, 2), +s.slice(2, 4));
+    }
+    return null;
+  }
+
+  /* --- string path --- */
+  let s = String(v)
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) return null;
+
+  s = s.replace(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/gi,
+    m => String(MONTH_NAMES[m.toLowerCase()] || m));
+
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const n = parseFloat(s);
+    const viaSerial = fromSerialOrCompact(n);
+    if (viaSerial) return viaSerial;
+    if (/^\d{8}$/.test(s)) {
+      const yFirst = buildISO(+s.slice(0, 4), +s.slice(4, 6), +s.slice(6, 8));
+      if (yFirst) return yFirst;
+      const usStyle = buildISO(+s.slice(4, 8), +s.slice(0, 2), +s.slice(2, 4));
+      if (usStyle) return usStyle;
+    }
+    if (/^\d{6}$/.test(s)) {
+      const usStyle = buildISO(2000 + +s.slice(4, 6), +s.slice(0, 2), +s.slice(2, 4));
+      if (usStyle) return usStyle;
+    }
+    return null;
+  }
+
+  s = s.replace(/[T\s]+\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\s*(?:am|pm)?\s*$/i, '').trim();
+
+  let m = s.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  if (m) {
+    const iso = buildISO(+m[1], +m[2], +m[3]);
+    if (iso) return iso;
+    const isoSwapped = buildISO(+m[1], +m[3], +m[2]);
+    if (isoSwapped) return isoSwapped;
+  }
+
+  const groups = s.match(/\d+/g);
+  if (groups && groups.length >= 3) {
+    const g = groups.slice(0, 3);
+
+    if (g[0].length === 4) {
+      const y = +g[0];
+      const a = buildISO(y, +g[1], +g[2]);
+      if (a) return a;
+      const b = buildISO(y, +g[2], +g[1]);
+      if (b) return b;
+    }
+
+    let y2 = null;
+    if (g[2].length === 4) y2 = +g[2];
+    else if (g[2].length === 2) y2 = 2000 + +g[2];
+    if (y2 && y2 >= 1900 && y2 <= 2200) {
+      const a = buildISO(y2, +g[0], +g[1]);
+      if (a) return a;
+      const b = buildISO(y2, +g[1], +g[0]);
+      if (b) return b;
+    }
+
+    if (g[1].length === 4) {
+      const y = +g[1];
+      const a = buildISO(y, +g[0], +g[2]);
+      if (a) return a;
+      const b = buildISO(y, +g[2], +g[0]);
+      if (b) return b;
+    }
+  }
+
+  const native = new Date(s);
+  if (!isNaN(native.getTime())) {
+    const y = native.getFullYear();
+    if (y >= 1900 && y <= 2200) {
+      return buildISO(y, native.getMonth() + 1, native.getDate());
+    }
+  }
+
+  return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Custom CSV tokenizer (RFC 4180 aware, no external library)          */
+/* ------------------------------------------------------------------ */
+function splitCSV(text) {
+  const src = String(text).replace(/^\uFEFF/, '');
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  let i = 0;
+
+  while (i < src.length) {
+    const c = src[i];
+
+    if (inQuotes) {
+      if (c === '"') {
+        if (src[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false;
+        i++;
+        continue;
+      }
+      field += c;
+      i++;
+      continue;
+    }
+
+    if (c === '"') { inQuotes = true; i++; continue; }
+    if (c === ',') { row.push(field); field = ''; i++; continue; }
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') {
+      row.push(field); field = '';
+      rows.push(row); row = [];
+      i++;
+      continue;
+    }
+    field += c;
+    i++;
+  }
+
+  if (field !== '' || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/* ------------------------------------------------------------------ */
+/* ORR parsing                                                         */
+/* ------------------------------------------------------------------ */
+function parseORR(text) {
+  const rows = splitCSV(text);
+
+  let hIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const r = (rows[i] || []).map(norm);
+    if (r.some(c => c.includes('business date')) && r.some(c => c.includes('total revenue'))) {
+      hIdx = i;
+      break;
+    }
+  }
+  if (hIdx < 0) {
+    throw new Error('Could not locate "Business Date" and "Total Revenue" columns in the ORR CSV.');
+  }
+
+  const headers = (rows[hIdx] || []).map(norm);
+  const dateIdx = headers.findIndex(c => c.includes('business date'));
+  const revIdx = headers.findIndex(c => c.includes('total revenue'));
+
+  const byDate = new Map();
+  const unparsed = [];
+
+  for (let i = hIdx + 1; i < rows.length; i++) {
+    const r = rows[i] || [];
+    if (r.length === 0 || r.every(c => c === '')) continue;
+
+    const rawDate = r[dateIdx];
+    const iso = parseDateToISO(rawDate);
+    if (!iso) {
+      unparsed.push(String(rawDate));
+      continue;
+    }
+
+    const rev = toNumber(r[revIdx]);
+    if (rev == null) {
+      unparsed.push(`${rawDate} (bad revenue: "${r[revIdx]}")`);
+      continue;
+    }
+    byDate.set(iso, (byDate.get(iso) || 0) + rev);
+  }
+
+  if (unparsed.length) {
+    console.warn('ORR rows skipped:', unparsed.slice(0, 10));
+  }
+  return byDate;
+}
+
+function sumRange(byDate, startISO, endISO) {
+  let total = 0;
+  for (const [iso, val] of byDate) {
+    if (iso >= startISO && iso <= endISO) total += val;
+  }
+  return total;
+}
+
+function windowCovered(byDate, startISO, endISO) {
+  if (!byDate || byDate.size === 0) return false;
+  let min = null, max = null;
+  for (const k of byDate.keys()) {
+    if (min === null || k < min) min = k;
+    if (max === null || k > max) max = k;
+  }
+  return min <= startISO && max >= endISO;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hotel Statistics (XLSX) table extraction                            */
+/* ------------------------------------------------------------------ */
+function extractTables(wb) {
+  const tables = [];
+
+  wb.SheetNames.forEach(sheetName => {
+    const ws = wb.Sheets[sheetName];
+    if (!ws) return;
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true, blankrows: true });
+    const before = tables.length;
+
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i] || [];
+      const a = row[0];
+      const b = row[1];
+
+      if (isBlank(a) && typeof b === 'string' && b.trim() !== '') {
+        const headers = (rows[i + 1] || []).map(c => (c == null ? '' : String(c).trim()));
+        const data = [];
+        let j = i + 2;
+        while (j < rows.length) {
+          const r = rows[j] || [];
+          if (isBlank(r[0])) break;
+          data.push(r);
+          j++;
+        }
+        tables.push({ title: b.trim(), sheet: sheetName, headers, rows: data });
+        i = j;
+      } else {
+        i++;
+      }
+    }
+
+    if (tables.length === before) {
+      for (let r = 0; r < rows.length; r++) {
+        const line = (rows[r] || []).map(norm);
+        if (line.some(c => c.includes('description'))) {
+          const data = [];
+          let j = r + 1;
+          while (j < rows.length && !isBlank((rows[j] || [])[0])) { data.push(rows[j]); j++; }
+          tables.push({
+            title: sheetName,
+            sheet: sheetName,
+            headers: (rows[r] || []).map(c => (c == null ? '' : String(c).trim())),
+            rows: data
+          });
+          break;
+        }
+      }
+    }
+  });
+
+  return tables;
+}
+
+function findTable(tables, names) {
+  for (const n of names) {
+    const t = tables.find(t => norm(t.title).includes(n));
+    if (t) return t;
+  }
+  return null;
+}
+
+function findCol(headers, pred) {
+  for (let i = 0; i < headers.length; i++) if (pred(headers[i])) return i;
+  return -1;
+}
+
+function findRow(rows, descCol, terms) {
+  for (const term of terms) {
+    const t = term.toLowerCase();
+    let idx = rows.findIndex(r => norm(r[descCol]) === t);
+    if (idx >= 0) return rows[idx];
+    idx = rows.findIndex(r => norm(r[descCol]).includes(t));
+    if (idx >= 0) return rows[idx];
+  }
+  return null;
+}
+
+function findMTDCol(headers) {
+  let i = headers.findIndex(h => { const t = norm(h); return t === 'mtd' || t === 'm-t-d'; });
+  if (i >= 0) return i;
+  i = headers.findIndex(h => norm(h).replace(/[^a-z]/g, '') === 'mtd');
+  return i;
+}
+
+function extractRoomStats(table, warn) {
+  if (!table) throw new Error('Could not find a "Room Statistics" table in the Hotel Statistics file.');
+
+  const headers = table.headers;
+  const descCol = findCol(headers, h => norm(h).includes('description'));
+  if (descCol < 0) throw new Error('The "Room Statistics" table has no "Description" column.');
+
+  const row = findRow(table.rows, descCol, [
+    'room sold excluding',
+    'rooms sold excluding',
+    'room sold',
+    'rooms sold'
+  ]);
+  if (!row) throw new Error('Could not find a "Rooms Sold" row in the "Room Statistics" table.');
+
+  const todayCol = findCol(headers, h => norm(h).includes('today'));
+  if (todayCol < 0) throw new Error('The "Room Statistics" table has no "Today" column.');
+
+  const mtdCol = findMTDCol(headers);
+  if (mtdCol < 0) warn('The "Room Statistics" table has no MTD column; "Rooms Sold this Month" will be blank.');
+
+  return {
+    label: String(row[descCol] || '').trim(),
+    roomsSold: toNumber(row[todayCol]),
+    mtdRooms: mtdCol >= 0 ? toNumber(row[mtdCol]) : null
+  };
+}
+
+function extractADR(table, warn) {
+  if (!table) { warn('Could not find a "Revenue Performance" table; ADR will be blank.'); return null; }
+
+  const headers = table.headers;
+  const descCol = findCol(headers, h => norm(h).includes('description'));
+  if (descCol < 0) { warn('The "Revenue Performance" table has no "Description" column; ADR will be blank.'); return null; }
+
+  let row = findRow(table.rows, descCol, ['adr excluding']);
+
+  if (!row) {
+    const candidates = table.rows.filter(r => norm(r[descCol]).includes('adr'));
+    if (candidates.length === 1) {
+      row = candidates[0];
+    } else if (candidates.length > 1) {
+      row = candidates[0];
+      warn(`Multiple rows contain "ADR" and none say "ADR Excluding". Using "${String(row[descCol]).trim()}".`);
+    }
+  }
+  if (!row) { warn('Could not find an ADR row in the "Revenue Performance" table.'); return null; }
+
+  const todayCol = findCol(headers, h => norm(h).includes('today'));
+  if (todayCol < 0) { warn('The "Revenue Performance" table has no "Today" column; ADR will be blank.'); return null; }
+
+  return toNumber(row[todayCol]);
+}
+
+/* ------------------------------------------------------------------ */
+/* State & UI plumbing                                                 */
+/* ------------------------------------------------------------------ */
+const currentOutput = { full: '', summary: '', subject: '' };
+const readiness = { summary: false, full: false, subject: false };
+
+const state = {
+  orrFileRef: null,
+  orrResult: null,
+  hsFileRef: null,
+  hsResult: null
+};
+
+function clearMessages() { $('messages').innerHTML = ''; }
+function message(kind, text) {
+  const div = document.createElement('div');
+  div.className = `msg ${kind}`;
+  div.textContent = text;
+  $('messages').appendChild(div);
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+
+function updateCopyButtons() {
+  const cf = $('copyFull'), cs = $('copySummary'), csub = $('copySubject');
+  if (cf) cf.disabled = !!cf.dataset.copying || !readiness.full;
+  if (cs) cs.disabled = !!cs.dataset.copying || !readiness.summary;
+  if (csub) csub.disabled = !!csub.dataset.copying || !readiness.subject;
+}
+
+function wireCopy(btn, getText) {
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    const text = getText();
+    if (!text) return;
+
+    await copyToClipboard(text);
+
+    if (!btn.dataset.orig) btn.dataset.orig = btn.textContent;
+    btn.style.minWidth = btn.offsetWidth + 'px';
+    btn.dataset.copying = '1';
+    btn.textContent = 'Copied!';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      btn.textContent = btn.dataset.orig;
+      delete btn.dataset.copying;
+      updateCopyButtons();
+    }, 1000);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Async cached parsers                                                */
+/* ------------------------------------------------------------------ */
+let refreshSeq = 0;
+let debounceTimer = null;
+
+async function getOrr(file, seq) {
+  if (state.orrFileRef === file && state.orrResult) return state.orrResult;
+  let result;
+  try {
+    const text = await file.text();
+    if (seq !== refreshSeq) return null;
+    result = { byDate: parseORR(text), error: null };
+  } catch (e) {
+    result = { byDate: null, error: (e && e.message) ? e.message : String(e) };
+  }
+  if (seq !== refreshSeq) return null;
+  state.orrFileRef = file;
+  state.orrResult = result;
+  return result;
+}
+
+async function getHS(file, seq) {
+  if (state.hsFileRef === file && state.hsResult) return state.hsResult;
+  const warnings = [];
+  let result;
+  try {
+    const buf = await file.arrayBuffer();
+    if (seq !== refreshSeq) return null;
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+    const tables = extractTables(wb);
+    const roomTable = findTable(tables, ['room statistics', 'room stats', 'room stat']);
+    const revTable = findTable(tables, ['revenue performance']);
+    const rooms = extractRoomStats(roomTable, t => warnings.push(t));
+    const adr = extractADR(revTable, t => warnings.push(t));
+    result = { roomsSold: rooms.roomsSold, mtdRooms: rooms.mtdRooms, adr, error: null, warnings };
+  } catch (e) {
+    result = {
+      roomsSold: null, mtdRooms: null, adr: null,
+      error: (e && e.message) ? e.message : String(e),
+      warnings
+    };
+  }
+  if (seq !== refreshSeq) return null;
+  state.hsFileRef = file;
+  state.hsResult = result;
+  return result;
+}
+
+/* ------------------------------------------------------------------ */
+/* Main refresh                                                        */
+/* ------------------------------------------------------------------ */
+function scheduleRefresh() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(refresh, 120);
+}
+
+async function refresh() {
+  const seq = ++refreshSeq;
+  clearMessages();
+
+  const reportISO = $('reportDate').value;
+  const orrFile = $('orrFile').files[0] || null;
+  const hsFile = $('hsFile').files[0] || null;
+  const roomsTonightRaw = $('roomsTonight').value;
+
+  let orr = { byDate: null, error: null };
+  if (orrFile) {
+    const r = await getOrr(orrFile, seq);
+    if (!r || seq !== refreshSeq) return;
+    orr = r;
+  }
+
+  let hs = { roomsSold: null, mtdRooms: null, adr: null, error: null, warnings: [] };
+  if (hsFile) {
+    const r = await getHS(hsFile, seq);
+    if (!r || seq !== refreshSeq) return;
+    hs = r;
+  }
+
+  if (orr.error) message('err', 'ORR: ' + orr.error);
+  if (hs.error) message('err', 'Hotel Statistics: ' + hs.error);
+  (hs.warnings || []).forEach(w => message('warn', w));
+
+  const byDate = orr.byDate;
+  const roomsSold = hs.roomsSold;
+  const mtdRooms = hs.mtdRooms;
+  const adr = hs.adr;
+  const roomsTonight = (roomsTonightRaw !== '' && isFinite(Number(roomsTonightRaw)))
+    ? Number(roomsTonightRaw) : null;
+  const totalDeposit = (roomsSold != null && adr != null) ? roomsSold * adr : null;
+
+  if (byDate && reportISO && !byDate.has(reportISO)) {
+    const near = [...byDate.keys()].sort().slice(-5).join(', ');
+    message('warn', `No ORR row for ${reportISO}. Parsed dates present (last 5): ${near || '(none)'}`);
+  }
+
+  const NA_HTML = '<span class="na">N/A</span>';
+  const lines = [];
+  const push = (html, text) => lines.push({ html, text });
+
+  // 1. Rooms Sold
+  {
+    const v = roomsSold == null ? '—' : fmtNum(roomsSold);
+    push(`Rooms Sold: ${v}`, `Rooms Sold: ${v}`);
+  }
+
+  // 2. ADR
+  {
+    const v = adr == null ? '—' : '$' + fmtMoney(adr);
+    push(`ADR: ${v}`, `ADR: ${v}`);
+  }
+
+  // 3. Day's Total Deposit
+  {
+    const v = totalDeposit == null ? '—' : '$' + fmtMoney(totalDeposit);
+    push(`Day’s Total Deposit: ${v}`, `Day’s Total Deposit: ${v}`);
+  }
+
+  // 4. Rooms Sold this Month
+  {
+    const v = mtdRooms == null ? '—' : fmtNum(mtdRooms);
+    push(`Rooms Sold this Month: ${v}`, `Rooms Sold this Month: ${v}`);
+  }
+
+  // 5. Daily Revenue
+  {
+    let v = '—';
+    if (reportISO && byDate) {
+      const n = byDate.has(reportISO) ? byDate.get(reportISO) : 0;
+      v = '$' + fmtMoney(n);
+    }
+    push(`Daily Revenue: ${v}`, `Daily Revenue: ${v}`);
+  }
+
+  // 6. MTD Revenue
+  {
+    if (!reportISO || !byDate) {
+      push('MTD Revenue: —', 'MTD Revenue: —');
+    } else {
+      const start = firstOfMonth(reportISO);
+      if (!windowCovered(byDate, start, reportISO)) {
+        push(`MTD Revenue: ${NA_HTML}`, 'MTD Revenue: N/A');
+      } else {
+        const v = '$' + fmtMoney(sumRange(byDate, start, reportISO));
+        push(`MTD Revenue: ${v}`, `MTD Revenue: ${v}`);
+      }
+    }
+  }
+
+  // 7. 30 Day Rolling Revenue
+  {
+    if (!reportISO || !byDate) {
+      push('30 Day Rolling Revenue: —', '30 Day Rolling Revenue: —');
+    } else {
+      const start = addDays(reportISO, -29);
+      if (!windowCovered(byDate, start, reportISO)) {
+        push(`30 Day Rolling Revenue: ${NA_HTML}`, '30 Day Rolling Revenue: N/A');
+      } else {
+        const v = '$' + fmtMoney(sumRange(byDate, start, reportISO));
+        const range = `${monthDay(start)}-${monthDay(reportISO)}`;
+        push(`30 Day Rolling Revenue: ${v}    ${range}`, `30 Day Rolling Revenue: ${v}    ${range}`);
+      }
+    }
+  }
+
+  // 8. Current Rooms for Tonight
+  {
+    const v = roomsTonight == null ? '—' : fmtNum(roomsTonight);
+    push(`Current Rooms for Tonight: ${v}`, `Current Rooms for Tonight: ${v}`);
+  }
+
+  $('output').innerHTML = lines.map(l => l.html).join('\n');
+
+  currentOutput.full = lines.map(l => l.text).join('\n');
+  currentOutput.summary = lines.slice(0, 3).map(l => l.text).join('\n');
+
+  if (reportISO) {
+    const rd = isoToDate(reportISO);
+    currentOutput.subject =
+      `Home2 Recap ${pad2(rd.getMonth() + 1)}.${pad2(rd.getDate())}.${String(rd.getFullYear()).slice(-2)}`;
+  } else {
+    currentOutput.subject = '';
+  }
+
+  readiness.summary = roomsSold != null && adr != null;
+  readiness.full = readiness.summary && !!byDate && byDate.size > 0 && roomsTonight != null && !!reportISO;
+  readiness.subject = !!reportISO;
+
+  updateCopyButtons();
+}
+
+/* ------------------------------------------------------------------ */
+/* Wire up                                                             */
+/* ------------------------------------------------------------------ */
+['reportDate', 'roomsTonight', 'orrFile', 'hsFile'].forEach(id => {
+  const el = $(id);
+  el.addEventListener('input', scheduleRefresh);
+  el.addEventListener('change', scheduleRefresh);
+});
+
+wireCopy($('copyFull'), () => currentOutput.full);
+wireCopy($('copySummary'), () => currentOutput.summary);
+wireCopy($('copySubject'), () => currentOutput.subject);
+$('reportDate').addEventListener('input', updateOrrHint);
+$('reportDate').addEventListener('change', updateOrrHint);
+
+refresh();
+updateOrrHint();
+</script>
+</body>
+</html>
