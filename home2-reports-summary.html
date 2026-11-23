@@ -67,7 +67,7 @@
   <div id="messages"></div>
 
   <div class="card">
-    <pre id="output">—</pre>
+    <pre id="output"></pre>
     <div class="row">
       <button id="copyFull" disabled>Copy Full</button>
       <button id="copySummary" class="secondary" disabled>Copy Summary</button>
@@ -103,13 +103,13 @@ const isBlank = v => v == null || (typeof v === 'string' && v.trim() === '');
 /* Formatting                                                          */
 /* ------------------------------------------------------------------ */
 function fmtNum(n) {
-  if (n == null || !isFinite(n)) return '—';
+  if (n == null || !isFinite(n)) return '';
   const r = Math.round(n * 100) / 100;
   if (Number.isInteger(r)) return r.toLocaleString('en-US');
   return r.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtMoney(n) {
-  if (n == null || !isFinite(n)) return '—';
+  if (n == null || !isFinite(n)) return '';
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -694,31 +694,31 @@ async function refresh() {
 
   // 1. Rooms Sold
   {
-    const v = roomsSold == null ? '—' : fmtNum(roomsSold);
+    const v = roomsSold == null ? '' : fmtNum(roomsSold);
     push(`Rooms Sold: ${v}`, `Rooms Sold: ${v}`);
   }
 
   // 2. ADR
   {
-    const v = adr == null ? '—' : '$' + fmtMoney(adr);
+    const v = adr == null ? '' : '$' + fmtMoney(adr);
     push(`ADR: ${v}`, `ADR: ${v}`);
   }
 
   // 3. Day's Total Deposit
   {
-    const v = totalDeposit == null ? '—' : '$' + fmtMoney(totalDeposit);
+    const v = totalDeposit == null ? '' : '$' + fmtMoney(totalDeposit);
     push(`Day’s Total Deposit: ${v}`, `Day’s Total Deposit: ${v}`);
   }
 
   // 4. Rooms Sold this Month
   {
-    const v = mtdRooms == null ? '—' : fmtNum(mtdRooms);
+    const v = mtdRooms == null ? '' : fmtNum(mtdRooms);
     push(`Rooms Sold this Month: ${v}`, `Rooms Sold this Month: ${v}`);
   }
 
   // 5. Daily Revenue
   {
-    let v = '—';
+    let v = '';
     if (reportISO && byDate) {
       const n = byDate.has(reportISO) ? byDate.get(reportISO) : 0;
       v = '$' + fmtMoney(n);
@@ -729,7 +729,7 @@ async function refresh() {
   // 6. MTD Revenue
   {
     if (!reportISO || !byDate) {
-      push('MTD Revenue: —', 'MTD Revenue: —');
+      push('MTD Revenue: ', 'MTD Revenue: ');
     } else {
       const start = firstOfMonth(reportISO);
       if (!windowCovered(byDate, start, reportISO)) {
@@ -744,7 +744,7 @@ async function refresh() {
   // 7. 30 Day Rolling Revenue
   {
     if (!reportISO || !byDate) {
-      push('30 Day Rolling Revenue: —', '30 Day Rolling Revenue: —');
+      push('30 Day Rolling Revenue: ', '30 Day Rolling Revenue: ');
     } else {
       const start = addDays(reportISO, -29);
       if (!windowCovered(byDate, start, reportISO)) {
@@ -759,7 +759,7 @@ async function refresh() {
 
   // 8. Current Rooms for Tonight
   {
-    const v = roomsTonight == null ? '—' : fmtNum(roomsTonight);
+    const v = roomsTonight == null ? '' : fmtNum(roomsTonight);
     push(`Current Rooms for Tonight: ${v}`, `Current Rooms for Tonight: ${v}`);
   }
 
