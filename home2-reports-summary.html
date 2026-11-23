@@ -28,8 +28,10 @@
   button.secondary{background:#fff;color:var(--accent)}
   button.secondary:disabled{background:#f2f3f5}
   .row{display:flex;gap:10px;flex-wrap:wrap}
-  pre#output{white-space:pre-wrap;background:#e0e0e0;color:#000000;padding:16px;border-radius:8px;
+  pre#output,pre.copyopt-pre{white-space:pre-wrap;background:#e0e0e0;color:#000000;padding:16px;border-radius:8px;
     font:14px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:60px;margin:0 0 14px;overflow-x:auto}
+  .copyopt-row{display:flex;gap:10px;align-items:flex-start}
+  .copyopt-row pre{margin:0;flex:1 1 auto;min-width:0}
   .na{color:#ff6b6b;font-weight:700}
   .msg{font-size:14px;padding:8px 11px;border-radius:8px;margin-bottom:8px}
   .msg.err{background:#fdecea;color:var(--err)}
@@ -569,6 +571,8 @@ function updateCopyButtons() {
   if (csub) csub.disabled = !!csub.dataset.copying || !readiness.subject;
 }
 
+const MANAGED_COPY_BTNS = new Set(['copyFull', 'copySummary', 'copySubject']);
+
 function wireCopy(btn, getText) {
   btn.addEventListener('click', async () => {
     if (btn.disabled) return;
@@ -586,7 +590,11 @@ function wireCopy(btn, getText) {
     setTimeout(() => {
       btn.textContent = btn.dataset.orig;
       delete btn.dataset.copying;
-      updateCopyButtons();
+      if (MANAGED_COPY_BTNS.has(btn.id)) {
+        updateCopyButtons();
+      } else {
+        btn.disabled = false;
+      }
     }, 1000);
   });
 }
@@ -784,6 +792,52 @@ async function refresh() {
 }
 
 /* ------------------------------------------------------------------ */
+/* URL-driven copy options (?copyoptions=a|b|c&delimeter=|)            */
+/* ------------------------------------------------------------------ */
+function addCopyOptions() {
+  const params = new URLSearchParams(location.search);
+  const raw = params.get('copyoptions');
+  if (raw == null) return;
+
+  let delim = params.get('delimeter');
+  if (!delim) delim = params.get('delimiter');
+  if (!delim) delim = '|';
+
+  const items = raw.split(delim).map(s => s.trim()).filter(s => s !== '');
+  if (items.length === 0) return;
+
+  const container = document.createElement('div');
+  container.id = 'copyOptions';
+
+  items.forEach((item, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const row = document.createElement('div');
+    row.className = 'copyopt-row';
+
+    const pre = document.createElement('pre');
+    pre.className = 'copyopt-pre';
+    pre.textContent = item;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'secondary';
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', `Copy option ${i + 1}`);
+
+    wireCopy(btn, () => item);
+
+    row.appendChild(pre);
+    row.appendChild(btn);
+    card.appendChild(row);
+    container.appendChild(card);
+  });
+
+  document.querySelector('.wrap').appendChild(container);
+}
+
+/* ------------------------------------------------------------------ */
 /* Wire up                                                             */
 /* ------------------------------------------------------------------ */
 ['reportDate', 'roomsTonight', 'orrFile', 'hsFile'].forEach(id => {
@@ -795,6 +849,8 @@ async function refresh() {
 wireCopy($('copyFull'), () => currentOutput.full);
 wireCopy($('copySummary'), () => currentOutput.summary);
 wireCopy($('copySubject'), () => currentOutput.subject);
+addCopyOptions();
+
 $('reportDate').addEventListener('input', updateOrrHint);
 $('reportDate').addEventListener('change', updateOrrHint);
 
