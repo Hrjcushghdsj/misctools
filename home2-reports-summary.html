@@ -27,15 +27,56 @@
   button:disabled{opacity:.45;cursor:not-allowed;filter:none}
   button.secondary{background:#fff;color:var(--accent)}
   button.secondary:disabled{background:#f2f3f5}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  pre#output,pre.copyopt-pre{white-space:pre-wrap;background:#e0e0e0;color:#000000;padding:16px;border-radius:8px;
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  pre#output{white-space:pre-wrap;background:#e0e0e0;color:#000000;padding:16px;border-radius:8px;
     font:14px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:60px;margin:0 0 14px;overflow-x:auto}
-  .copyopt-row{display:flex;gap:10px;align-items:flex-start}
-  .copyopt-row pre{margin:0;flex:1 1 auto;min-width:0}
   .na{color:#ff6b6b;font-weight:700}
   .msg{font-size:14px;padding:8px 11px;border-radius:8px;margin-bottom:8px}
   .msg.err{background:#fdecea;color:var(--err)}
   .msg.warn{background:#fff4e5;color:var(--warn)}
+
+  .hidden{display:none !important}
+
+  /* ---- input grid (2x2) ---- */
+  .input-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px 24px;
+  }
+  .input-grid .field{margin-bottom:0}
+  @media (max-width:640px){
+    .input-grid{grid-template-columns:1fr}
+  }
+
+  /* ---- large bottom spacer ---- */
+  .bottom-spacer{height:50vh}
+
+  /* ---- sent confirmation messages ---- */
+  .sent-msg{
+    margin-top:12px;
+    font-size:14px;
+    color:var(--muted);
+  }
+  .sent-msg a{
+    color:var(--accent);
+    font-weight:600;
+    text-decoration:none;
+  }
+  .sent-msg a:hover{text-decoration:underline}
+
+  .dropdown{position:relative;display:inline-block}
+  .dropdown-menu{
+    position:absolute;top:100%;right:0;margin-top:6px;
+    background:#fff;border:1px solid var(--border);border-radius:8px;
+    box-shadow:0 6px 20px rgba(0,0,0,.14);padding:6px;z-index:100;
+    min-width:170px;display:flex;flex-direction:column;gap:2px;
+  }
+  .dropdown-menu button{
+    width:100%;text-align:left;border:none;background:transparent;color:var(--ink);
+    padding:8px 12px;border-radius:6px;font-weight:500;
+  }
+  .dropdown-menu button:hover:not(:disabled){background:#f0f2f5;filter:none}
+  .dropdown-menu button:disabled{background:transparent}
 </style>
 </head>
 <body>
@@ -43,26 +84,32 @@
   <h1>Home2 Recap Generator</h1>
 
   <div class="card">
-    <div class="field">
-      <label for="reportDate">Date of Report</label>
-      <input type="date" id="reportDate" />
-    </div>
+    <div class="input-grid">
+      <!-- Top left: Date -->
+      <div class="field">
+        <label for="reportDate">Date of Report</label>
+        <input type="date" id="reportDate" />
+      </div>
 
-    <div class="field">
-      <label for="orrFile">Operational Revenue Reporting (.csv)</label>
-      <input type="file" id="orrFile" accept=".csv,text/csv" />
-      <div class="hint" id="orrHint">Must include at least 30 days of history, inclusive of the report date (e.g. 10/22–11/20).</div>
-    </div>
+      <!-- Top right: Current Rooms for Tonight -->
+      <div class="field">
+        <label for="roomsTonight">Current Rooms for Tonight (see PEP &gt; Availability &gt; Sold)</label>
+        <input type="number" id="roomsTonight" min="0" step="1" placeholder="e.g. 42" />
+      </div>
 
-    <div class="field">
-      <label for="hsFile">Hotel Statistics (.xlsx)</label>
-      <input type="file" id="hsFile" accept=".xlsx,.xls" />
-      <div class="hint">Must contain “Room Statistics” and “Revenue Performance” tables.</div>
-    </div>
+      <!-- Bottom left: ORR CSV -->
+      <div class="field">
+        <label for="orrFile">Operational Revenue Reporting (.csv)</label>
+        <input type="file" id="orrFile" accept=".csv,text/csv" />
+        <div class="hint" id="orrHint">Must include at least 30 days of history, inclusive of the report date (e.g. 10/22–11/20).</div>
+      </div>
 
-    <div class="field">
-      <label for="roomsTonight">Current Rooms for Tonight (see PEP > Availability > Sold)</label>
-      <input type="number" id="roomsTonight" min="0" step="1" placeholder="e.g. 42" />
+      <!-- Bottom right: Hotel Statistics XLSX -->
+      <div class="field">
+        <label for="hsFile">Hotel Statistics (.xlsx)</label>
+        <input type="file" id="hsFile" accept=".xlsx,.xls" />
+        <div class="hint">Must contain “Room Statistics” and “Revenue Performance” tables.</div>
+      </div>
     </div>
   </div>
 
@@ -70,13 +117,30 @@
 
   <div class="card">
     <pre id="output"></pre>
-    <div class="row">
+    <div class="row" id="actionRow">
       <button id="copyFull" disabled>Copy Full</button>
       <button id="copySummary" class="secondary" disabled>Copy Summary</button>
       <button id="copySubject" class="secondary">Copy Subject</button>
+      <button id="sendFull" class="hidden" disabled>Send Full Report</button>
+      <button id="sendSummary" class="secondary hidden" disabled>Send Summary</button>
+      <div id="moreDropdown" class="dropdown hidden">
+        <button id="moreBtn" class="secondary">More ▾</button>
+        <div id="moreMenu" class="dropdown-menu hidden"></div>
+      </div>
+    </div>
+
+    <!-- Sent confirmations (shown after a send button is used) -->
+    <div id="sentFullMsg" class="sent-msg hidden">
+      Full Report sent. <a id="sentFullLink" href="#" target="_blank" rel="noopener noreferrer">Click here</a> to send again.
+    </div>
+    <div id="sentSummaryMsg" class="sent-msg hidden">
+      Summary sent. <a id="sentSummaryLink" href="#" target="_blank" rel="noopener noreferrer">Click here</a> to send again.
     </div>
   </div>
 </div>
+
+<!-- Large spacer at the very bottom -->
+<div class="bottom-spacer"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -84,6 +148,15 @@
 /* Small helpers                                                       */
 /* ------------------------------------------------------------------ */
 const $ = id => document.getElementById(id);
+
+/* Send-mode URL parameters */
+const urlParams = new URLSearchParams(location.search);
+function normalizeRecipients(raw) {
+  return String(raw || '').split(/[,;]/).map(s => s.trim()).filter(Boolean).join(',');
+}
+const fullRecipients = normalizeRecipients(urlParams.get('fullrecipients'));
+const summaryRecipients = normalizeRecipients(urlParams.get('summaryrecipients'));
+const sendMode = !!(fullRecipients || summaryRecipients);
 
 const pad2 = n => String(n).padStart(2, '0');
 const toISO = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -571,6 +644,35 @@ function updateCopyButtons() {
   if (csub) csub.disabled = !!csub.dataset.copying || !readiness.subject;
 }
 
+function buildSendUrl(kind) {
+  const to = kind === 'full' ? fullRecipients : summaryRecipients;
+  const body = kind === 'full' ? currentOutput.full : currentOutput.summary;
+  return buildGmailUrl(to, currentOutput.subject, body);
+}
+
+function updateSendButtons() {
+  if (!sendMode) return;
+
+  if (fullRecipients) {
+    const btn = $('sendFull');
+    if (btn.classList.contains('hidden')) {
+      // Already sent: keep the "send again" link current
+      $('sentFullLink').href = buildSendUrl('full');
+    } else {
+      btn.disabled = !readiness.full;
+    }
+  }
+
+  if (summaryRecipients) {
+    const btn = $('sendSummary');
+    if (btn.classList.contains('hidden')) {
+      $('sentSummaryLink').href = buildSendUrl('summary');
+    } else {
+      btn.disabled = !readiness.summary;
+    }
+  }
+}
+
 const MANAGED_COPY_BTNS = new Set(['copyFull', 'copySummary', 'copySubject']);
 
 function wireCopy(btn, getText) {
@@ -789,52 +891,88 @@ async function refresh() {
   readiness.subject = !!reportISO;
 
   updateCopyButtons();
+  updateSendButtons();
 }
 
 /* ------------------------------------------------------------------ */
-/* URL-driven copy options (?copyoptions=a|b|c&delimeter=|)            */
+/* Send mode: Gmail compose deep links                                 */
 /* ------------------------------------------------------------------ */
-function addCopyOptions() {
-  const params = new URLSearchParams(location.search);
-  const raw = params.get('copyoptions');
-  if (raw == null) return;
+function buildGmailUrl(to, subject, body) {
+  const params = new URLSearchParams();
+  params.set('view', 'cm');
+  params.set('fs', '1');
+  if (to) params.set('to', to);
+  if (subject) params.set('su', subject);
+  if (body) params.set('body', body);
+  return 'https://mail.google.com/mail/?' + params.toString();
+}
 
-  let delim = params.get('delimeter');
-  if (!delim) delim = params.get('delimiter');
-  if (!delim) delim = '|';
+function openGmailCompose(to, subject, body) {
+  const url = buildGmailUrl(to, subject, body);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
 
-  const items = raw.split(delim).map(s => s.trim()).filter(s => s !== '');
-  if (items.length === 0) return;
+function markSent(kind) {
+  const btn = kind === 'full' ? $('sendFull') : $('sendSummary');
+  const msg = kind === 'full' ? $('sentFullMsg') : $('sentSummaryMsg');
+  const link = kind === 'full' ? $('sentFullLink') : $('sentSummaryLink');
 
-  const container = document.createElement('div');
-  container.id = 'copyOptions';
+  const url = buildSendUrl(kind);
+  link.href = url;
+  link.textContent = 'Click here';
 
-  items.forEach((item, i) => {
-    const card = document.createElement('div');
-    card.className = 'card';
+  btn.classList.add('hidden');
+  msg.classList.remove('hidden');
+}
 
-    const row = document.createElement('div');
-    row.className = 'copyopt-row';
+function initSendMode() {
+  if (!sendMode) return;
 
-    const pre = document.createElement('pre');
-    pre.className = 'copyopt-pre';
-    pre.textContent = item;
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'secondary';
-    btn.textContent = 'Copy';
-    btn.setAttribute('aria-label', `Copy option ${i + 1}`);
-
-    wireCopy(btn, () => item);
-
-    row.appendChild(pre);
-    row.appendChild(btn);
-    card.appendChild(row);
-    container.appendChild(card);
+  // Move copy buttons into the "More" dropdown menu
+  const moreMenu = $('moreMenu');
+  ['copyFull', 'copySummary', 'copySubject'].forEach(id => {
+    moreMenu.appendChild($(id));
   });
 
-  document.querySelector('.wrap').appendChild(container);
+  // Reveal dropdown + send buttons
+  $('moreDropdown').classList.remove('hidden');
+  if (fullRecipients) $('sendFull').classList.remove('hidden');
+  if (summaryRecipients) $('sendSummary').classList.remove('hidden');
+
+  // Toggle dropdown
+  $('moreBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('moreMenu').classList.toggle('hidden');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const menu = $('moreMenu');
+    if (menu.classList.contains('hidden')) return;
+    if (menu.contains(e.target)) return;
+    if (e.target === $('moreBtn') || $('moreBtn').contains(e.target)) return;
+    menu.classList.add('hidden');
+  });
+
+  // Send full report
+  if (fullRecipients) {
+    $('sendFull').addEventListener('click', () => {
+      if ($('sendFull').disabled) return;
+      const url = buildSendUrl('full');
+      window.open(url, '_blank', 'noopener,noreferrer');
+      markSent('full');
+    });
+  }
+
+  // Send summary
+  if (summaryRecipients) {
+    $('sendSummary').addEventListener('click', () => {
+      if ($('sendSummary').disabled) return;
+      const url = buildSendUrl('summary');
+      window.open(url, '_blank', 'noopener,noreferrer');
+      markSent('summary');
+    });
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -849,7 +987,8 @@ function addCopyOptions() {
 wireCopy($('copyFull'), () => currentOutput.full);
 wireCopy($('copySummary'), () => currentOutput.summary);
 wireCopy($('copySubject'), () => currentOutput.subject);
-addCopyOptions();
+
+initSendMode();
 
 $('reportDate').addEventListener('input', updateOrrHint);
 $('reportDate').addEventListener('change', updateOrrHint);
